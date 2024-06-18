@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/nim-lang/opencl",
+    "downloadMethod": "git",
+    "vcsRevision": "bad8d9c13821b21fa95a1dc78d13ecfa51b93944",
+    "files": [
+      "/opencl.nimble",
+      "/opencl.nim"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "1.0"
+    ]
+  }
+}

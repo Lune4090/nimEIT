@@ -1,0 +1,160 @@
+# Copyright 2017 the Arraymancer contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import  ./backend/openmp,
+        ./data_structure, ./init_copy_cpu, ./accessors,
+        sugar
+
+
+when not defined(nimHasEffectsOf):
+  {.pragma: effectsOf.}
+
+template reduce_inline*[T](arg: Tensor[T], op: untyped): untyped =
+  let z = arg # ensure that if t is the result of a function it is not called multiple times
+  var reduced: T
+  omp_parallel_reduce_blocks(reduced, block_offset, block_size, z.size, 1, op) do:
+    x = z.atContiguousIndex(block_offset)
+  do:
+    for y {.inject.} in z.items(block_offset, block_size):
+      op
+  reduced
+
+template fold_inline*[T](arg: Tensor[T], op_initial, op_middle, op_final: untyped): untyped =
+  let z = arg # ensure that if t is the result of a function it is not called multiple times
+  var reduced: T
+  omp_parallel_reduce_blocks(reduced, block_offset, block_size, z.size, 1, op_final) do:
+    let y {.inject.} = z.atContiguousIndex(block_offset)
+    op_initial
+  do:
+    for y {.inject.} in z.items(block_offset, block_size):
+      op_middle
+  reduced
+
+template reduce_axis_inline*[T](arg: Tensor[T], reduction_axis: int, op: untyped): untyped =
+  let z = arg # ensure that if t is the result of a function it is not called multiple times
+  var reduced: type(z)
+  when compileOption("boundChecks"):
+    if arg.rank <= reduction_axis:
+      raise newException(IndexDefect, "Input tensor rank (" & $arg.rank &
+        ") must be greater than reduction axis (" & $reduction_axis &
+        ") when executing reduce_axis_inline: " & astToStr(op))
+  let weight = z.size div z.shape[reduction_axis]
+  omp_parallel_reduce_blocks(reduced, block_offset, block_size, z.shape[reduction_axis], weight, op) do:
+    x = z.atAxisIndex(reduction_axis, block_offset).clone()
+  do:
+    for y {.inject.} in z.axis(reduction_axis, block_offset, block_size):
+      op
+  reduced
+
+template fold_axis_inline*[T](arg: Tensor[T], accumType: typedesc, fold_axis: int, op_initial, op_middle, op_final: untyped): untyped =
+  let z = arg # ensure that if t is the result of a function it is not called multiple times
+  var reduced: accumType
+  when compileOption("boundChecks"):
+    if arg.rank <= fold_axis:
+      raise newException(IndexDefect, "Input tensor rank (" & $arg.rank &
+        ") must be greater than fold axis (" & $fold_axis & ") when executing fold_axis_inline")
+  let weight = z.size div z.shape[fold_axis]
+  omp_parallel_reduce_blocks(reduced, block_offset, block_size, z.shape[fold_axis], weight, op_final) do:
+    let y {.inject.} = z.atAxisIndex(fold_axis, block_offset).clone()
+    op_initial
+  do:
+    for y {.inject.} in z.axis(fold_axis, block_offset, block_size):
+      op_middle
+  reduced
+
+# ####################################################################
+# Folds and reductions over a single Tensor
+
+# Note: You can't pass builtins like `+` or `+=` due to Nim limitations
+# https://github.com/nim-lang/Nim/issues/2172
+
+proc fold*[U, T](arg: Tensor[U],
+                start_val: T,
+                f:(T, U) -> T,
+                ): T {.effectsOf: f.}=
+  ## Chain result = f(result, element) over all elements of the Tensor
+  ## Input:
+  ##     - A tensor to aggregate on
+  ##     - The starting value
+  ##     - The aggregation function. It is applied this way: new_aggregate = f(old_aggregate, current_value)
+  ## Result:
+  ##     - An aggregate of the function called on the starting value and all elements of the tensor
+  ## Usage:
+  ##  .. code:: nim
+  ##     a.fold(100,max) ## This compare 100 with the first tensor value and returns 100
+  ##                     ## In the end, we will get the highest value in the Tensor or 100
+  ##                     ## whichever is bigger.
+
+  result = start_val
+  for val in arg:
+    result = f(result, val)
+
+proc fold*[U, T](arg: Tensor[U],
+                start_val: Tensor[T],
+                f: (Tensor[T], Tensor[U]) -> Tensor[T],
+                axis: int
+                ): Tensor[T] {.effectsOf: f.} =
+  ## Chain result = f(result, element) over all elements of the Tensor
+  ## Input:
+  ##     - A tensor to aggregate on
+  ##     - The starting value
+  ##     - The aggregation function. It is applied this way: new_aggregate = f(old_aggregate, current_value)
+  ##     - The axis to aggregate on
+  ## Result:
+  ##     - An Tensor with the aggregate of the function called on the starting value and all slices along the selected axis
+
+  result = start_val
+  for val in arg.axis(axis):
+    result = f(result, val)
+
+proc reduce*[T](arg: Tensor[T],
+                f: (T, T) -> T
+                ): T {.effectsOf: f.} =
+  ## Chain result = f(result, element) over all elements of the Tensor.
+  ##
+  ## The starting value is the first element of the Tensor.
+  ## Input:
+  ##     - A tensor to aggregate on
+  ##     - The aggregation function. It is applied this way: new_aggregate = f(old_aggregate, current_value)
+  ## Result:
+  ##     - An aggregate of the function called all elements of the tensor
+  ## Usage:
+  ##  .. code:: nim
+  ##     a.reduce(max) ## This returns the maximum value in the Tensor.
+
+  arg.reduce_inline():
+    when defined(gcArc) or defined(gcOrc):
+      x = f(x,y) # hopefully nvro will work
+    else:
+      shallowCopy(x, f(x,y))
+
+proc reduce*[T](arg: Tensor[T],
+                f: (Tensor[T], Tensor[T]) -> Tensor[T],
+                axis: int
+                ): Tensor[T] {.noinit, effectsOf: f.} =
+  ## Chain result = f(result, element) over all elements of the Tensor.
+  ##
+  ## The starting value is the first element of the Tensor.
+  ## Input:
+  ##     - A tensor to aggregate on
+  ##     - The aggregation function. It is applied this way: new_aggregate = f(old_aggregate, current_value)
+  ##     - An axis to aggregate on
+  ## Result:
+  ##     - A tensor aggregate of the function called all elements of the tensor
+
+  arg.reduce_axis_inline(axis):
+    when defined(gcArc) or defined(gcOrc):
+      x = f(x,y) # hopefully nvro will work
+    else:
+      shallowCopy(x, f(x,y))

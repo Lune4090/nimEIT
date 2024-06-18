@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/andreaferretti/nimcl",
+    "downloadMethod": "git",
+    "vcsRevision": "f2f963ff043a364386888f8a6cf91646cd583e99",
+    "files": [
+      "/nimcl.nim",
+      "/nimcl.nimble"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.1.3"
+    ]
+  }
+}

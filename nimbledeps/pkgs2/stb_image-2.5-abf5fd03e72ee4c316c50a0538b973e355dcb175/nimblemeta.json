@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://gitlab.com/define-private-public/stb_image-Nim.git",
+    "downloadMethod": "git",
+    "vcsRevision": "ba5f45286bfa9bed93d8d6b941949cd6218ec888",
+    "files": [
+      "/stb_image/read.nim",
+      "/stb_image/read.c",
+      "/stb_image/write.c",
+      "/stb_image.nimble",
+      "/stb_image/components.nim",
+      "/stb_image/write.nim",
+      "/stb_image/stb_image.h",
+      "/stb_image/stb_image_write.h"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "2.5"
+    ]
+  }
+}

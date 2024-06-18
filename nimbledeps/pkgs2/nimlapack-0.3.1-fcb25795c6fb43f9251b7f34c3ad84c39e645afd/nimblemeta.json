@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/andreaferretti/nimlapack",
+    "downloadMethod": "git",
+    "vcsRevision": "231430b3d2156f5cbe8fe16bb8967cd9a93964c5",
+    "files": [
+      "/nimlapack.nim",
+      "/nimlapack.nimble"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.3.1"
+    ]
+  }
+}

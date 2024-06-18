@@ -1,0 +1,368 @@
+# Copyright 2017 the Arraymancer contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import
+  # Internal
+  ../laser/tensor/initialization,
+  ../laser/strided_iteration/foreach,
+  ./data_structure
+
+# Standard library
+import std / [random, math]
+
+export initialization
+
+proc newTensorUninit*[T](shape: varargs[int] = [0]): Tensor[T] {.noinit, inline.} =
+  ## Creates a new uninitialized Tensor of type `T` on the Cpu backend
+  ## Input:
+  ##      - Shape of the Tensor (defaults to an empty rank-1 tensor)
+  ## Result:
+  ##      - A Tensor of the proper shape with NO initialization
+  ## Warnings ⚠:
+  ##      - Tensor data is uninitialized and contains garbage.
+  ##      - If no shape is provided, a 1D tensor of size 0 is created.
+  ##        It is possible to create a rank-0 tensor by explicitly
+  ##        providing an empty shape `[]` (e.g. `newTensorUninit[float]([])`).
+  var size: int
+  initTensorMetadata(result, size, shape)
+  allocCpuStorage(result.storage, size)
+
+proc newTensorUninit*[T](size: int): Tensor[T] {.noinit, inline.} =
+  ## Overload above taking `varargs[int]` to avoid "expression * cannot be called"
+  ## errors if called in a template. Warning: This ``will`` create a 1D tensor!
+  result = newTensorUninit[T]([size])
+
+proc newTensorUninit*[T](shape: Metadata): Tensor[T] {.noinit, inline.} =
+  ## Creates a new uninitialized Tensor of type `T` on the Cpu backend
+  ## Input:
+  ##      - Shape of the Tensor
+  ## Result:
+  ##      - A Tensor of the proper shape with NO initialization
+  ## Warning ⚠:
+  ##      - Tensor data is uninitialized and contains garbage.
+  var size: int
+  initTensorMetadata(result, size, shape)
+  allocCpuStorage(result.storage, size)
+
+# newTensor is defined in laser/tensor/initialization
+
+proc newTensorWith*[T](shape: varargs[int], value: T): Tensor[T] {.noinit.} =
+  ## Creates a new Tensor filled with the given value
+  ## Input:
+  ##      - Shape of the Tensor
+  ##      - Type of its elements
+  ##      - Value to initialize its elements
+  ## Result:
+  ##      - A Tensor of the proper shape initialized with
+  ##        the given value
+  # Todo: use a template that can accept proc or value. See the code for newSeqWith: https://github.com/nim-lang/Nim/blob/master/lib/pure/collections/sequtils.nim#L650-L665
+  var size: int
+  initTensorMetadata(result, size, shape)
+  allocCpuStorage(result.storage, size)
+
+  when T is KnownSupportsCopyMem:
+    forEachContiguous x in result:
+      x = value
+  else:
+    for i in 0 ..< result.size:
+      result[i] = value
+
+proc newTensorWith*[T](shape: Metadata, value: T): Tensor[T] {.noinit.} =
+  ## Creates a new Tensor filled with the given value
+  ## Input:
+  ##      - Shape of the Tensor
+  ##      - Type of its elements
+  ##      - Value to initialize its elements
+  ## Result:
+  ##      - A Tensor of the proper shape initialized with
+  ##        the given value
+  # Todo: use a template that can accept proc or value. See the code for newSeqWith: https://github.com/nim-lang/Nim/blob/master/lib/pure/collections/sequtils.nim#L650-L665
+  var size: int
+  initTensorMetadata(result, size, shape)
+  allocCpuStorage(result.storage, size)
+
+  when T is KnownSupportsCopyMem:
+    forEachContiguous x in result:
+      x = value
+  else:
+    for i in 0 ..< result.size:
+      result[i] = value
+
+# newTensor is defined in laser/tensor/initialization
+
+proc zeros*[T: SomeNumber|Complex[float32]|Complex[float64]|bool](shape: varargs[int]): Tensor[T] {.noinit, inline.} =
+  ## Creates a new Tensor filled with 0
+  ##
+  ## Input:
+  ##      - Shape of the Tensor
+  ##      - Type of its elements
+  ## Result:
+  ##      - A zero-ed Tensor of the input shape on backend Cpu
+  result = newTensor[T](shape)
+
+proc zeros*[T: SomeNumber|Complex[float32]|Complex[float64]|bool](shape: Metadata): Tensor[T] {.noinit, inline.} =
+  ## Creates a new Tensor filled with 0
+  ##
+  ## Input:
+  ##      - Shape of the Tensor
+  ##      - Type of its elements
+  ## Result:
+  ##      - A zero-ed Tensor of the input shape on backend Cpu
+  result = newTensor[T](shape)
+
+proc zeros_like*[T: SomeNumber|Complex[float32]|Complex[float64]|bool](t: Tensor[T]): Tensor[T] {.noinit, inline.} =
+  ## Creates a new Tensor filled with 0 with the same shape as the input
+  ## Input:
+  ##      - Shape of the Tensor
+  ##      - Type of its elements
+  ## Result:
+  ##      - A zero-ed Tensor of the same shape
+  result = zeros[T](t.shape)
+
+proc ones*[T: SomeNumber|Complex[float32]|Complex[float64]|bool](shape: varargs[int]): Tensor[T] {.noinit, inline.} =
+  ## Creates a new Tensor filled with 1
+  ## Input:
+  ##      - Shape of the Tensor
+  ##      - Type of its elements
+  ## Result:
+  ##      - A one-ed Tensor of the same shape
+  when T is SomeNumber | bool:
+    result = newTensorWith[T](shape, 1.T)
+  else:
+    type F = T.T # Get the float subtype of Complex[T]
+    result = newTensorWith[T](shape, complex(1.F, 0.F))
+
+proc ones*[T: SomeNumber|Complex[float32]|Complex[float64]|bool](shape: Metadata): Tensor[T] {.noinit, inline.} =
+  ## Creates a new Tensor filled with 1
+  ## Input:
+  ##      - Shape of the Tensor
+  ##      - Type of its elements
+  ## Result:
+  ##      - A one-ed Tensor of the same shape
+  when T is SomeNumber | bool:
+    result = newTensorWith[T](shape, 1.T)
+  else:
+    type F = T.T
+    result = newTensorWith[T](shape, complex(1.F, 0.F))
+
+proc ones_like*[T: SomeNumber|Complex[float32]|Complex[float64]|bool](t: Tensor[T]): Tensor[T] {.noinit, inline.} =
+  ## Creates a new Tensor filled with 1 with the same shape as the input
+  ## and filled with 1
+  ## Input:
+  ##      - Tensor
+  ## Result:
+  ##      - A one-ed Tensor of the same shape
+  result = ones[T](t.shape)
+
+proc arange*[T: SomeNumber](start, stop, step: T): Tensor[T] {.noinit.} =
+  ## Creates a new 1d-tensor with values evenly spaced by ``step``
+  ## in the half-open interval [start, stop)
+  ##
+  ## Resulting size is ceil((stop - start) / step)
+  ##
+  ## ⚠️ Warnings:
+  ## To limit floating point rounding issues, size is computed
+  ## by converting to float64.
+  ##
+  ## - It is recommended to add a small epsilon for non-integer steps
+  ## - float64 cannot represent exactly integers over 2^32 (~4.3 billions)
+  # TODO: proper exceptions
+  assert step != 0, "Step must be non-zero"
+  when T is SomeFloat:
+    assert start.classify() notin {fcNan, fcInf, fcNegInf}
+    assert stop.classify() notin {fcNan, fcInf, fcNegInf}
+  assert (step > 0 and stop >= start) or (step < 0 and stop <= start), "bounds inconsistent with step sign"
+
+  var size_f64 = ceil((stop.float64 - start.float64) / step.float64)
+  assert 0 <= size_f64 and size_f64 <= float64(high(int)), "Invalid size"
+
+  let shape = [int(size_f64)]
+  var size: int
+  initTensorMetadata(result, size, shape)
+  allocCpuStorage(result.storage, size)
+
+  for i in 0 ..< size:
+    result.storage.raw_buffer[i] = start + i.T * step
+
+template arange*[T: SomeNumber](stop: T): Tensor[T] =
+  # Error messages of templates are very poor
+  # While it seems that we could do `arange(T(0), stop, T(1))`
+  # that does not work well (https://github.com/mratsim/Arraymancer/issues/606)
+  # Instead we must do this:
+  type TT = typeof(stop)
+  const zero = TT(0)
+  const one = TT(1)
+  arange(zero, stop, one)
+
+template arange*[T: SomeNumber](start, stop: T): Tensor[T] =
+  # Error messages of templates are very poor
+  type TT = typeof(stop)
+  const one = TT(1)
+  arange(start, stop, one)
+
+
+template randomTensorCpu[T](t: Tensor[T], shape: varargs[int], max_or_range: typed): untyped =
+  var size: int
+  initTensorMetadata(result, size, shape)
+  allocCpuStorage(result.storage, size)
+
+  for i in 0 ..< t.size:
+    result.storage.raw_buffer[i] = T(rand(max_or_range)) # Due to automatic converter (float32 -> float64), we must force T #68
+
+proc randomTensor*[T:SomeFloat](shape: varargs[int], max: T): Tensor[T] {.noinit.} =
+  ## Creates a new float Tensor filled with values between 0 and max.
+  ##
+  ## Random seed can be set by importing ``random`` and ``randomize(seed)``
+  ## Input:
+  ##      - a shape
+  ##      - the max value possible (float)
+  ##      - a tensor backend
+  ## Result:
+  ##      - A tensor of the input shape filled with random values between 0 and max input value
+  randomTensorCpu(result, shape, max)
+
+proc randomTensor*(shape: varargs[int], max: int): Tensor[int] {.noinit.} =
+  ## Creates a new int Tensor filled with values between 0 and max (inclusive).
+  ##
+  ## Random seed can be set by importing ``random`` and ``randomize(seed)``
+  ## Input:
+  ##      - a shape
+  ##      - the max value possible (integer, inclusive)
+  ##      - a tensor backend
+  ## Result:
+  ##      - A tensor of the input shape filled with random values between 0 and max input value (excluded)
+  randomTensorCpu(result, shape, max)
+
+proc randomTensor*[T](shape: varargs[int], slice: Slice[T]): Tensor[T] {.noinit.} =
+  ## Creates a new int Tensor filled with values in the Slice range (inclusive).
+  ##
+  ## Random seed can be set by importing ``random`` and ``randomize(seed)``
+  ## Input:
+  ##      - a shape
+  ##      - a range/slice
+  ##      - a tensor backend
+  ## Result:
+  ##      - A tensor of the input shape filled with random values in the slice range
+  randomTensorCpu(result, shape, slice)
+
+proc randomTensor*[T: bool](shape: varargs[int]): Tensor[T] {.noinit.} =
+  ## Creates a new bool Tensor.
+  ##
+  ## Random seed can be set by importing ``random`` and ``randomize(seed)``
+  ## Input:
+  ##      - a shape
+  ## Result:
+  ##      - A tensor of the input shape filled with random bool values
+  randomTensorCpu(result, shape, false..true)
+
+proc randomTensor*[T](shape: varargs[int], sample_source: openArray[T]): Tensor[T] {.noinit.} =
+  ## Creates a new Tensor filled with values uniformly sampled from ``sample_source``
+  ##
+  ## Random seed can be set by importing ``random`` and ``randomize(seed)``
+  ## Input:
+  ##      - a shape
+  ##      - a sample_source
+  ## Result:
+  ##      - A tensor of the input shape filled with random values from ``sample_source``
+  var size: int
+  initTensorMetadata(result, size, shape)
+  allocCpuStorage(result.storage, size)
+
+  for i in 0 ..< size:
+    result.storage.raw_buffer[i] = sample(sample_source)
+
+proc randomNormal(mean = 0.0, std = 1.0): float =
+  ## Random number in the normal distribution using Box-Muller method
+  ## See https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
+  var valid {.global.} = false
+  var x {.global.}, y {.global.}, rho {.global.}: float
+  if not valid:
+    x = rand(1.0)
+    y = rand(1.0)
+    rho = sqrt(-2.0 * ln(1.0 - y))
+    valid = true
+    return rho*cos(2.0*PI*x)*std+mean
+  else:
+    valid = false
+    return rho*sin(2.0*PI*x)*std+mean
+
+proc randomNormalTensor*[T:SomeFloat](shape: varargs[int], mean:T = 0, std:T = 1): Tensor[T] {.noinit.} =
+  ## Creates a new Tensor filled with values in the normal distribution
+  ##
+  ## Random seed can be set by importing ``random`` and ``randomize(seed)``
+  ## Input:
+  ##      - a shape
+  ##      - the mean (default 0)
+  ##      - the standard deviation (default 1)
+  ## Result:
+  ##      - A tensor of the input shape filled with random values in the normal distribution
+  var size: int
+  initTensorMetadata(result, size, shape)
+  allocCpuStorage(result.storage, size)
+
+  for i in 0 ..< size:
+    result.storage.raw_buffer[i] = T(randomNormal(mean.float, std.float))
+
+proc linspace*[T: SomeNumber](start, stop: T, num: int, endpoint = true): Tensor[float] {.noinit.} =
+  ## Creates a new 1d-tensor with `num` values linearly spaced between
+  ## the closed interval [start, stop] (`endpoint == true`) or in the
+  ## half open interval [start, stop) (`endpoint == false`).
+  ##
+  ## Resulting size is `num`.
+  # TODO: proper exceptions
+  when T is SomeFloat:
+    assert start.classify() notin {fcNan, fcInf, fcNegInf}, "linspace start argument is NaN or +/-Inf"
+    assert stop.classify() notin {fcNan, fcInf, fcNegInf}, "linspace stop argument is NaN or +/-Inf"
+  result = newTensorUninit[float](num)
+  var
+    step = start.float
+    diff: float
+  if endpoint == true:
+    diff = (stop.float - start.float) / float(num - 1)
+  else:
+    diff = (stop.float - start.float) / float(num)
+
+  for i in 0 ..< num:
+    result[i] = step
+    # for every element calculate new value for next iteration
+    step += diff
+
+proc logspace*[T: SomeNumber](start, stop: T,
+                              num: int,
+                              base = 10.0,
+                              endpoint = true): Tensor[float] {.noinit.} =
+  ## Creates a new 1d-tensor with `num` values linearly spaced in log space
+  ## of base `base` either in the closed interval [start, stop] (`endpoint == true`)
+  ## or in the half open interval [start, stop) (`endpoint == false`).
+  ##
+  ## Note that the given start, stop arguments refer to the exponents of `base`!
+  ##
+  ## Resulting size is `num`.
+  # TODO: think about not using `linspace` internally
+  result = linspace(start, stop, num, endpoint = endpoint)
+  for i in 0 ..< num:
+    result[i] = pow(base, result[i])
+
+proc geomspace*[T: SomeFloat](start, stop: T,
+                              num: int,
+                              endpoint = true): Tensor[float] {.noinit, inline.} =
+  ## Creates a new 1d-tensor with `num` values linearly spaced in a log scale
+  ## (i.e. a geometric progression). This is similar to `logspace`, but with
+  ## the interval endpoints specified directly as [start, stop] (`endpoint == true`)
+  ## or in the half open interval [start, stop) (`endpoint == false`).
+  ##
+  ## Resulting size is `num`.
+  assert start > 0.0, "geomspace start argument must be positive"
+  assert stop > 0.0, "geomspace stop argument must be positive"
+  result = logspace(log10(start), log10(stop), num, endpoint = endpoint)

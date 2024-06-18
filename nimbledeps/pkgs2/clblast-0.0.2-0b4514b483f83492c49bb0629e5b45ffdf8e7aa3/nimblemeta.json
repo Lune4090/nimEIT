@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/numforge/nim-clblast",
+    "downloadMethod": "git",
+    "vcsRevision": "cdadb10dd85b95c9e7248f0b9661ad1e7616efe6",
+    "files": [
+      "/generated/include/clblast_half.h",
+      "/generated/include/clblast_c.h",
+      "/generated/clblast_netlib_c.nim",
+      "/clblast.nim",
+      "/generated/clblast_half.nim",
+      "/generated/include/clblast.h",
+      "/generated/clblast_c.nim",
+      "/generated/include/clblast_cuda.h",
+      "/generated/include/clblast_netlib_c.h",
+      "/clblast.nimble"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.0.2"
+    ]
+  }
+}

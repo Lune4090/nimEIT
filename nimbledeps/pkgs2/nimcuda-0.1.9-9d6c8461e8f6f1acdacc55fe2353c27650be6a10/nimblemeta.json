@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/andreaferretti/nimcuda",
+    "downloadMethod": "git",
+    "vcsRevision": "5c3cf233726549b63266f6dba14788f30e0405b6",
+    "files": [
+      "/nimcuda/nvgraph.nim",
+      "/nimcuda/cusolverDn.nim",
+      "/nimcuda/cusolverSp.nim",
+      "/nimcuda/cuda_runtime_api.nim",
+      "/nimcuda/cufft.nim",
+      "/nimcuda/driver_types.nim",
+      "/nimcuda/cublas_api.nim",
+      "/nimcuda/nimcuda.nim",
+      "/nimcuda/curand.nim",
+      "/nimcuda/cusolver_common.nim",
+      "/nimcuda/surface_types.nim",
+      "/nimcuda/texture_types.nim",
+      "/nimcuda/cusparse.nim",
+      "/nimcuda/cudnn.nim",
+      "/nimcuda/cusolverRf.nim",
+      "/nimcuda.nimble",
+      "/nimcuda/cuComplex.nim",
+      "/nimcuda/library_types.nim",
+      "/nimcuda/cublas_v2.nim",
+      "/nimcuda/nvblas.nim",
+      "/nimcuda/vector_types.nim",
+      "/nimcuda/cuda_occupancy.nim"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.1.9"
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/nim-lang/zip",
+    "downloadMethod": "git",
+    "vcsRevision": "bdc5783fefc1afb8eb622ff13d464a832ce1d507",
+    "files": [
+      "/zip/gzipfiles.nim",
+      "/zip.nimble",
+      "/zip/zipfiles.nim",
+      "/zip/private/libzip_all.c",
+      "/zip/zzip.nim",
+      "/zip/libzip.nim",
+      "/zip/zlib.nim"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.3.1"
+    ]
+  }
+}
