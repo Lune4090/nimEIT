@@ -131,12 +131,44 @@ $$
 \frac{\partial}{\partial x} \frac{\partial h}{\partial \frac{\partial u}{\partial x}} + \frac{\partial}{\partial y} \frac{\partial h}{\partial \frac{\partial u}{\partial y}} - \frac{\partial}{\partial x} - \frac{\partial h}{\partial u} = 0
 $$
 
-
-
 ### Galerkin法を用いたFEMの定式化
 
 [参考](https://qiita.com/atily17/items/fa8abcc4d778c16fa11a)
 
 ### EITアルゴリズムにおけるFEM順問題
 
-### EITアルゴリズムにおける
+### EITアルゴリズムにおける解像度限界
+
+[参考(かなり古いが...)](https://iopscience.iop.org/article/10.1088/0143-0815/9/4A/007/pdf)
+
+[上記に言及している資料](https://ieeexplore.ieee.org/abstract/document/962276)
+
+円筒形の物体中心部に異なる電気伝導率を持つ半径 $r$ の物体(phantom)が存在している時、交流電流を用いたEITによってその物体を検知できる理論的限界
+
+1. 全電極に電流を印加する場合 (ACT)
+
+$$
+r \geq r_b = \simeq (\frac{f \pi h \sigma_o \epsilon_v}{5L})^{I/2}r_0
+$$
+
+$r_b$: 検出可能な最小の物体半径
+$r_0$: 円筒半径
+$\sigma_o$: 円筒の伝導率
+$\epsilon_v$: センサの感度限界 $\Delta V$
+$f$: 電極がカバーする表面積の割合 $(f \simeq 1)$
+$h$: 円筒高さ
+$w$: 電極間距離 $(= \frac{f r_0 2 \pi}{L})$
+
+2. 隣り合う電極に電流を印加する場合
+
+$$
+r \geq r_a = [\frac{4\sin(f\pi/L)\sin(\pi/L)}{\pi}]^{-{1/2}}r_b
+$$
+
+3. 反対側の電極に電流を印加する場合
+
+$$
+r \geq r_a = [\frac{4\sin(f\pi/L)}{\pi}]^{-{1/2}}r_b
+$$
+
+つまり、ここからわかるのは、**1以外のパターンでは、電極数を増やしても精度が増加するとは限らないが、逆に言うと、1の場合では電極を増やすことが解像度向上の有効な戦略である**ということ
