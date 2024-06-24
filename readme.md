@@ -184,7 +184,7 @@ $$
 二次元オイラー・ラグランジュ方程式
 
 $$
-\frac{\partial}{\partial x} \frac{\partial h}{\partial \frac{\partial u}{\partial x}} + \frac{\partial}{\partial y} \frac{\partial h}{\partial \frac{\partial u}{\partial y}} - \frac{\partial}{\partial x} - \frac{\partial h}{\partial u} = 0
+\frac{\partial}{\partial x} \frac{\partial h}{\partial \frac{\partial u}{\partial x}} + \frac{\partial}{\partial y} \frac{\partial h}{\partial \frac{\partial u}{\partial y}} - \frac{\partial h}{\partial u} = 0
 \\ 
 \\ (1)
 $$
