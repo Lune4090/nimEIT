@@ -5,9 +5,9 @@ author        = "lune4090"
 description   = "A new awesome nimble package"
 license       = "MIT"
 srcDir        = "src"
-bin           = @["eit"]
+bin           = @["EIT"]
 
 
 # Dependencies
 
-requires "nim >= 2.0.4"
+requires "nim >= 2.0.4", "arraymancer", "plotly", "results"

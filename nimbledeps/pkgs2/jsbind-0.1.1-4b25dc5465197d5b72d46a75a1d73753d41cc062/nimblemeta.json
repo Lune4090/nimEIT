@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/yglukhov/jsbind",
+    "downloadMethod": "git",
+    "vcsRevision": "d9c2ded6b81a69cbf8636eb3402c077c524c56a9",
+    "files": [
+      "/jsbind/wasmrt_glue.nim",
+      "/jsbind.nim",
+      "/jsbind.nimble",
+      "/jsbind/emscripten.nim",
+      "/jsbind/emscripten_api.nim",
+      "/jsbind/emcc_wrapper_win32.nim"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.1.1"
+    ]
+  }
+}

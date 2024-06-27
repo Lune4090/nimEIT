@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/treeform/ws",
+    "downloadMethod": "git",
+    "vcsRevision": "9536bf99ddf5948db221ccb7bb3663aa238a8e21",
+    "files": [
+      "/ws.nim",
+      "/ws.nimble",
+      "/ws/jester_extra.nim"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.5.0"
+    ]
+  }
+}

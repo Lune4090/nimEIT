@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/SciNim/nim-plotly",
+    "downloadMethod": "git",
+    "vcsRevision": "b9705980965f65e4174ef68c4f93cd082375b623",
+    "files": [
+      "/plotly/api.nim",
+      "/plotly/plotly_sugar.nim",
+      "/plotly/plotly_display.nim",
+      "/plotly/image_retrieve.nim",
+      "/plotly/plotly_subplots.nim",
+      "/plotly.nimble",
+      "/plotly/color.nim",
+      "/plotly/plotly_types.nim",
+      "/plotly/tmpl_html.nim",
+      "/plotly.nim",
+      "/plotly/errorbar.nim",
+      "/plotly/plotly_js.nim",
+      "/plotly/predefined_colormaps.nim"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.3.3"
+    ]
+  }
+}

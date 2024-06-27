@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/oskca/webview",
+    "downloadMethod": "git",
+    "vcsRevision": "ca3e25ee93a63c3a819a1bfa17386dad6ad41b1a",
+    "files": [
+      "/webview/LICENSE",
+      "/webview/README.md",
+      "/webview.nim",
+      "/webview/webview.h",
+      "/webview/webview.go",
+      "/webview.nimble"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.1.0"
+    ]
+  }
+}
