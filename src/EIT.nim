@@ -793,8 +793,6 @@ proc fem(system: System): Tensor[float] =
         new_coef_vec[len(system.innerNodes) + mesh.idNode3] += neumannBC3
     
     coefficient_matrix[len(system.innerNodes) + id, _] = coefficient_matrix[len(system.innerNodes) + id, _] + new_coef_vec.reshape(1, len(system.innerNodes) + len(system.outerNodes))
-    echo new_coef_vec[1..18]
-    echo new_coef_vec[len(system.innerNodes)..<len(system.innerNodes) + len(system.outerNodes)]
 
   return coefficient_matrix
 
@@ -861,7 +859,7 @@ proc draw_V(system: System) =
 const
   numElectrodes = 24
   diameter = 10.0
-  num_inner_nodes = 18+12+6+1
+  num_inner_nodes = 24+12+6+1
   R1 = 7.5
   R2 = 5.0
   R3 = 2.5
@@ -883,15 +881,14 @@ for i in 0..<(num_inner_nodes-1):
   #  if x^2 + y^2 < (diameter-gap)^2:
   #    newNodeXY = (x, y)
   #    break
-  if i < 18:
-    newNodeXY = (R1*cos((i/18)*2*PI), R1*sin((i/18)*2*PI))
-  elif i < 18+12:
+  if i < 24:
+    newNodeXY = (R1*cos((i/24)*2*PI), R1*sin((i/24)*2*PI))
+  elif i < 24+12:
     newNodeXY = (R2*cos((i/12)*2*PI), R2*sin((i/12)*2*PI))
   else:
     newNodeXY = (R3*cos((i/6)*2*PI), R3*sin((i/6)*2*PI))
     
   var newNode = InnerNode(X: newNodeXY[0], Y: newNodeXY[1], V: 0.0)
-  #echo newNode
 
   add_new_node_to_system(system, newNode)
 
@@ -903,10 +900,10 @@ var
   I: seq[float]
 for i in 0..<len(system.innerNodes) + len(system.outerNodes):
   I.add(0.0)
-for i in 6..<7:
+for i in 0..<1:
   I[len(system.innerNodes) + i] = 1.0
-for i in 18..<19:
-  I[len(system.innerNodes) + len(system.outerNodes) - (i+1)] = -1.0
+for i in 12..<13:
+  I[len(system.innerNodes) + i] = -1.0
 
 let V = F.pinv*I.toTensor # FV = I(0,..., 0, I1, ..., In)
 
