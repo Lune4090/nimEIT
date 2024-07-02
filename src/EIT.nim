@@ -843,10 +843,10 @@ proc draw_V(system: System) =
         Vmax = v
 
   for (i, v) in Vs.pairs():
-    #colors.add(Color(r: 0.1 + 0.9*((v-Vmin)/(Vmax-Vmin)), g: 0.1 + 0.9*((v-Vmin)/(Vmax-Vmin)), b: 0.2, a: 0.4))
+    #colors.add(Color(r: 0.1 + 0.9*((v-Vmin)/(Vmax-Vmin)), g: 1.0 - 0.9*((v-Vmin)/(Vmax-Vmin)), b: 0.0, a: 0.4))
 
     if i < len(system.innerNodes):
-      colors.add(Color(r: 1.0 - 0.9*((v-Vmin)/(Vmax-Vmin)), g: 0.1 + 0.9*((v-Vmin)/(Vmax-Vmin)), b: 0.0, a: 0.4))
+      colors.add(Color(r: 0.1 + 0.9*((v-Vmin)/(Vmax-Vmin)), g: 1.0 - 0.9*((v-Vmin)/(Vmax-Vmin)), b: 0.0, a: 0.4))
     else:
       colors.add(Color(r: 0.0, g: 0.0, b: 0.0, a: 0.4))
  
