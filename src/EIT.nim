@@ -622,17 +622,8 @@ proc fem(system: System): Tensor[float] =
      
     coefficient_matrix[id, _] = coefficient_matrix[id, _] + new_coef_vec.reshape(1, size(new_coef_vec).int)
 
-  ## 次に外ノードに対してノイマン境界条件(電流条件) γ∇ϕ·n = Iを元に連立方程式を立てる
-  ## i番目とi+1番目のノードを含むメッシュについて、法線ベクトルnを考える
-  ## 外ノードはシステム定義時に円周を等分するように決めているので、n = (cosθ, sinθ)とすれば良いと分かる
-  ## 後はノイマン境界条件の式に叩き込んで、ϕ = ΣN_iϕ_iなる関係を利用して、
-  ## 係数行列内の len(system.innerNodes) + id 番目の要素について代入すべき要素を入れればよいはず
   for (id, node) in system.outerNodes.pairs():
-    var
-      new_coef_vec = zeros[float]([len(system.innerNodes) + len(system.outerNodes)])
-      theta = (id.toFloat+1/2)/len(system.outerNodes).toFloat*2*PI
-      n = (cos(theta), sin(theta))
-
+    var new_coef_vec = zeros[float]([len(system.innerNodes) + len(system.outerNodes)])
     for mesh in system.meshes.items():
       var
         S: float
@@ -648,159 +639,292 @@ proc fem(system: System): Tensor[float] =
         y2: float
         x3: float
         y3: float
+        sigma1: float
         sigma2: float
+        sigma3: float
+      if mesh.isNode1Outer and mesh.idNode1 == id:
+        if mesh.isNode2Outer and mesh.isNode3Outer:
+          x1 = system.outerNodes[mesh.idNode1].X
+          y1 = system.outerNodes[mesh.idNode1].Y
+          x2 = system.outerNodes[mesh.idNode2].X
+          y2 = system.outerNodes[mesh.idNode2].Y
+          x3 = system.outerNodes[mesh.idNode3].X
+          y3 = system.outerNodes[mesh.idNode3].Y
+          sigma1 = system.outerNodes[mesh.idNode1].sigma
+          sigma2 = system.outerNodes[mesh.idNode2].sigma
+          sigma3 = system.outerNodes[mesh.idNode3].sigma
 
-      if (mesh.idNode1 == id and mesh.isNode1Outer) and (mesh.idNode2 == (id+1) mod len(system.outerNodes) and mesh.isNode2Outer):
-        x1 = system.outerNodes[mesh.idNode1].X
-        y1 = system.outerNodes[mesh.idNode1].Y
-        x2 = system.outerNodes[mesh.idNode2].X
-        y2 = system.outerNodes[mesh.idNode2].Y
-        x3 = system.innerNodes[mesh.idNode3].X
-        y3 = system.innerNodes[mesh.idNode3].Y
-        sigma2 = system.outerNodes[mesh.idNode2].sigma
-        S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
-        a1 = y2-y3
-        a2 = y3-y1
-        a3 = y1-y2
-        b1 = x3-x2
-        b2 = x1-x3
-        b3 = x2-x1
-        let
-          neumannBC1 = (node.sigma + sigma2)/2*(a1*n[0]/(2*S)+b1*n[1]/(2*S))
-          neumannBC2 = (node.sigma + sigma2)/2*(a2*n[0]/(2*S)+b2*n[1]/(2*S))
-          neumannBC3 = (node.sigma + sigma2)/2*(a3*n[0]/(2*S)+b3*n[1]/(2*S))
-        new_coef_vec[len(system.innerNodes) + mesh.idNode1] += neumannBC1
-        new_coef_vec[len(system.innerNodes) + mesh.idNode2] += neumannBC2
-        new_coef_vec[mesh.idNode3] += neumannBC3
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          
+          new_coef_vec[len(system.innerNodes) + mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a1+b1*b1)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a2+b1*b2)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a3+b1*b3)
 
-      elif (mesh.idNode1 == id and mesh.isNode1Outer) and (mesh.idNode3 == (id+1) mod len(system.outerNodes) and mesh.isNode3Outer):
-        x1 = system.outerNodes[mesh.idNode1].X
-        y1 = system.outerNodes[mesh.idNode1].Y
-        x2 = system.innerNodes[mesh.idNode2].X
-        y2 = system.innerNodes[mesh.idNode2].Y
-        x3 = system.outerNodes[mesh.idNode3].X
-        y3 = system.outerNodes[mesh.idNode3].Y
-        sigma2 = system.outerNodes[mesh.idNode3].sigma
-        S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
-        a1 = y2-y3
-        a2 = y3-y1
-        a3 = y1-y2
-        b1 = x3-x2
-        b2 = x1-x3
-        b3 = x2-x1
-        let
-          neumannBC1 = (node.sigma + sigma2)/2*(a1*n[0]/(2*S)+b1*n[1]/(2*S))
-          neumannBC2 = (node.sigma + sigma2)/2*(a2*n[0]/(2*S)+b2*n[1]/(2*S))
-          neumannBC3 = (node.sigma + sigma2)/2*(a3*n[0]/(2*S)+b3*n[1]/(2*S))
+        elif mesh.isNode2Outer and not mesh.isNode3Outer:
+          x1 = system.outerNodes[mesh.idNode1].X
+          y1 = system.outerNodes[mesh.idNode1].Y
+          x2 = system.outerNodes[mesh.idNode2].X
+          y2 = system.outerNodes[mesh.idNode2].Y
+          x3 = system.innerNodes[mesh.idNode3].X
+          y3 = system.innerNodes[mesh.idNode3].Y
+          sigma1 = system.outerNodes[mesh.idNode1].sigma
+          sigma2 = system.outerNodes[mesh.idNode2].sigma
+          sigma3 = system.innerNodes[mesh.idNode3].sigma
+         
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          
+          new_coef_vec[len(system.innerNodes) + mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a1+b1*b1)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a2+b1*b2)
+          new_coef_vec[mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a3+b1*b3)
+        
+        elif not mesh.isNode2Outer and mesh.isNode3Outer:
+          x1 = system.outerNodes[mesh.idNode1].X
+          y1 = system.outerNodes[mesh.idNode1].Y
+          x2 = system.innerNodes[mesh.idNode2].X
+          y2 = system.innerNodes[mesh.idNode2].Y
+          x3 = system.outerNodes[mesh.idNode3].X
+          y3 = system.outerNodes[mesh.idNode3].Y
+          sigma1 = system.outerNodes[mesh.idNode1].sigma
+          sigma2 = system.innerNodes[mesh.idNode2].sigma
+          sigma3 = system.outerNodes[mesh.idNode3].sigma
 
-        new_coef_vec[len(system.innerNodes) + mesh.idNode1] += neumannBC1
-        new_coef_vec[mesh.idNode2] += neumannBC2
-        new_coef_vec[len(system.innerNodes) + mesh.idNode3] += neumannBC3
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          new_coef_vec[len(system.innerNodes) + mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a1+b1*b1)
+          new_coef_vec[mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a2+b1*b2)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a3+b1*b3)
+        
+        elif not mesh.isNode2Outer and not mesh.isNode3Outer:
+          x1 = system.outerNodes[mesh.idNode1].X
+          y1 = system.outerNodes[mesh.idNode1].Y
+          x2 = system.innerNodes[mesh.idNode2].X
+          y2 = system.innerNodes[mesh.idNode2].Y
+          x3 = system.innerNodes[mesh.idNode3].X
+          y3 = system.innerNodes[mesh.idNode3].Y
+          sigma1 = system.outerNodes[mesh.idNode1].sigma
+          sigma2 = system.innerNodes[mesh.idNode2].sigma
+          sigma3 = system.innerNodes[mesh.idNode3].sigma
 
-      elif (mesh.idNode2 == id and mesh.isNode2Outer) and (mesh.idNode1 == (id+1) mod len(system.outerNodes) and mesh.isNode1Outer):
-        x1 = system.outerNodes[mesh.idNode1].X
-        y1 = system.outerNodes[mesh.idNode1].Y
-        x2 = system.outerNodes[mesh.idNode2].X
-        y2 = system.outerNodes[mesh.idNode2].Y
-        x3 = system.innerNodes[mesh.idNode3].X
-        y3 = system.innerNodes[mesh.idNode3].Y
-        sigma2 = system.outerNodes[mesh.idNode1].sigma
-        S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
-        a1 = y2-y3
-        a2 = y3-y1
-        a3 = y1-y2
-        b1 = x3-x2
-        b2 = x1-x3
-        b3 = x2-x1
-        let
-          neumannBC1 = (node.sigma + sigma2)/2*(a1*n[0]/(2*S)+b1*n[1]/(2*S))
-          neumannBC2 = (node.sigma + sigma2)/2*(a2*n[0]/(2*S)+b2*n[1]/(2*S))
-          neumannBC3 = (node.sigma + sigma2)/2*(a3*n[0]/(2*S)+b3*n[1]/(2*S))
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          new_coef_vec[len(system.innerNodes) + mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a1+b1*b1)
+          new_coef_vec[mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a2+b1*b2)
+          new_coef_vec[mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a1*a3+b1*b3)
 
-        new_coef_vec[len(system.innerNodes) + mesh.idNode1] += neumannBC1
-        new_coef_vec[len(system.innerNodes) + mesh.idNode2] += neumannBC2
-        new_coef_vec[mesh.idNode3] += neumannBC3
+      elif mesh.isNode2Outer and mesh.idNode2 == id:
+        if mesh.isNode1Outer and mesh.isNode3Outer:
+          x1 = system.outerNodes[mesh.idNode1].X
+          y1 = system.outerNodes[mesh.idNode1].Y
+          x2 = system.outerNodes[mesh.idNode2].X
+          y2 = system.outerNodes[mesh.idNode2].Y
+          x3 = system.outerNodes[mesh.idNode3].X
+          y3 = system.outerNodes[mesh.idNode3].Y
+          sigma1 = system.outerNodes[mesh.idNode1].sigma
+          sigma2 = system.outerNodes[mesh.idNode2].sigma
+          sigma3 = system.outerNodes[mesh.idNode3].sigma
 
-      elif (mesh.idNode2 == id and mesh.isNode2Outer) and (mesh.idNode3 == (id+1) mod len(system.outerNodes) and mesh.isNode3Outer):
-        x1 = system.innerNodes[mesh.idNode1].X
-        y1 = system.innerNodes[mesh.idNode1].Y
-        x2 = system.outerNodes[mesh.idNode2].X
-        y2 = system.outerNodes[mesh.idNode2].Y
-        x3 = system.outerNodes[mesh.idNode3].X
-        y3 = system.outerNodes[mesh.idNode3].Y
-        sigma2 = system.outerNodes[mesh.idNode3].sigma
-        S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
-        a1 = y2-y3
-        a2 = y3-y1
-        a3 = y1-y2
-        b1 = x3-x2
-        b2 = x1-x3
-        b3 = x2-x1
-        let
-          neumannBC1 = (node.sigma + sigma2)/2*(a1*n[0]/(2*S)+b1*n[1]/(2*S))
-          neumannBC2 = (node.sigma + sigma2)/2*(a2*n[0]/(2*S)+b2*n[1]/(2*S))
-          neumannBC3 = (node.sigma + sigma2)/2*(a3*n[0]/(2*S)+b3*n[1]/(2*S))
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          
+          new_coef_vec[len(system.innerNodes) + mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a1+b2*b1)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a2+b2*b2)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a3+b2*b3)
+        
+        elif mesh.isNode1Outer and not mesh.isNode3Outer:
+          x1 = system.outerNodes[mesh.idNode1].X
+          y1 = system.outerNodes[mesh.idNode1].Y
+          x2 = system.outerNodes[mesh.idNode2].X
+          y2 = system.outerNodes[mesh.idNode2].Y
+          x3 = system.innerNodes[mesh.idNode3].X
+          y3 = system.innerNodes[mesh.idNode3].Y
+          sigma1 = system.outerNodes[mesh.idNode1].sigma
+          sigma2 = system.outerNodes[mesh.idNode2].sigma
+          sigma3 = system.innerNodes[mesh.idNode3].sigma
 
-        new_coef_vec[mesh.idNode1] += neumannBC1
-        new_coef_vec[len(system.innerNodes) + mesh.idNode2] += neumannBC2
-        new_coef_vec[len(system.innerNodes) + mesh.idNode3] += neumannBC3
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          
+          new_coef_vec[len(system.innerNodes) + mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a1+b2*b1)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a2+b2*b2)
+          new_coef_vec[mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a3+b2*b3)
+        
+        elif not mesh.isNode1Outer and mesh.isNode3Outer:
+          x1 = system.innerNodes[mesh.idNode1].X
+          y1 = system.innerNodes[mesh.idNode1].Y
+          x2 = system.outerNodes[mesh.idNode2].X
+          y2 = system.outerNodes[mesh.idNode2].Y
+          x3 = system.outerNodes[mesh.idNode3].X
+          y3 = system.outerNodes[mesh.idNode3].Y
+          sigma1 = system.innerNodes[mesh.idNode1].sigma
+          sigma2 = system.outerNodes[mesh.idNode2].sigma
+          sigma3 = system.outerNodes[mesh.idNode3].sigma
 
-      elif (mesh.idNode3 == id and mesh.isNode3Outer) and (mesh.idNode1 == (id+1) mod len(system.outerNodes) and mesh.isNode1Outer):
-        x1 = system.outerNodes[mesh.idNode1].X
-        y1 = system.outerNodes[mesh.idNode1].Y
-        x2 = system.innerNodes[mesh.idNode2].X
-        y2 = system.innerNodes[mesh.idNode2].Y
-        x3 = system.outerNodes[mesh.idNode3].X
-        y3 = system.outerNodes[mesh.idNode3].Y
-        sigma2 = system.outerNodes[mesh.idNode1].sigma
-        S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
-        a1 = y2-y3
-        a2 = y3-y1
-        a3 = y1-y2
-        b1 = x3-x2
-        b2 = x1-x3
-        b3 = x2-x1
-        let
-          neumannBC1 = (node.sigma + sigma2)/2*(a1*n[0]/(2*S)+b1*n[1]/(2*S))
-          neumannBC2 = (node.sigma + sigma2)/2*(a2*n[0]/(2*S)+b2*n[1]/(2*S))
-          neumannBC3 = (node.sigma + sigma2)/2*(a3*n[0]/(2*S)+b3*n[1]/(2*S))
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          
+          new_coef_vec[mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a1+b2*b1)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a2+b2*b2)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a3+b2*b3)
+       
+        elif not mesh.isNode1Outer and not mesh.isNode3Outer:
+          x1 = system.innerNodes[mesh.idNode1].X
+          y1 = system.innerNodes[mesh.idNode1].Y
+          x2 = system.outerNodes[mesh.idNode2].X
+          y2 = system.outerNodes[mesh.idNode2].Y
+          x3 = system.innerNodes[mesh.idNode3].X
+          y3 = system.innerNodes[mesh.idNode3].Y
+          sigma1 = system.innerNodes[mesh.idNode1].sigma
+          sigma2 = system.outerNodes[mesh.idNode2].sigma
+          sigma3 = system.innerNodes[mesh.idNode3].sigma
 
-        new_coef_vec[len(system.innerNodes) + mesh.idNode1] += neumannBC1
-        new_coef_vec[mesh.idNode2] += neumannBC2
-        new_coef_vec[len(system.innerNodes) + mesh.idNode3] += neumannBC3
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          
+          new_coef_vec[mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a1+b2*b1)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a2+b2*b2)
+          new_coef_vec[mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a2*a3+b2*b3)
 
-      elif (mesh.idNode3 == id and mesh.isNode3Outer) and (mesh.idNode2 == (id+1) mod len(system.outerNodes) and mesh.isNode2Outer):
-        x1 = system.innerNodes[mesh.idNode1].X
-        y1 = system.innerNodes[mesh.idNode1].Y
-        x2 = system.outerNodes[mesh.idNode2].X
-        y2 = system.outerNodes[mesh.idNode2].Y
-        x3 = system.outerNodes[mesh.idNode3].X
-        y3 = system.outerNodes[mesh.idNode3].Y
-        sigma2 = system.outerNodes[mesh.idNode2].sigma
-        S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
-        a1 = y2-y3
-        a2 = y3-y1
-        a3 = y1-y2
-        b1 = x3-x2
-        b2 = x1-x3
-        b3 = x2-x1
-        let
-          neumannBC1 = (node.sigma + sigma2)/2*(a1*n[0]/(2*S)+b1*n[1]/(2*S))
-          neumannBC2 = (node.sigma + sigma2)/2*(a2*n[0]/(2*S)+b2*n[1]/(2*S))
-          neumannBC3 = (node.sigma + sigma2)/2*(a3*n[0]/(2*S)+b3*n[1]/(2*S))
-        new_coef_vec[mesh.idNode1] += neumannBC1
-        new_coef_vec[len(system.innerNodes) + mesh.idNode2] += neumannBC2
-        new_coef_vec[len(system.innerNodes) + mesh.idNode3] += neumannBC3
-    
-    coefficient_matrix[len(system.innerNodes) + id, _] = coefficient_matrix[len(system.innerNodes) + id, _] + new_coef_vec.reshape(1, len(system.innerNodes) + len(system.outerNodes))
-    echo new_coef_vec[1..18]
-    echo new_coef_vec[len(system.innerNodes)..<len(system.innerNodes) + len(system.outerNodes)]
+      elif not mesh.isNode3Outer and mesh.idNode3 == id:
+        if mesh.isNode1Outer and mesh.isNode2Outer:
+          x1 = system.outerNodes[mesh.idNode1].X
+          y1 = system.outerNodes[mesh.idNode1].Y
+          x2 = system.outerNodes[mesh.idNode2].X
+          y2 = system.outerNodes[mesh.idNode2].Y
+          x3 = system.outerNodes[mesh.idNode3].X
+          y3 = system.outerNodes[mesh.idNode3].Y
+          sigma1 = system.outerNodes[mesh.idNode1].sigma
+          sigma2 = system.outerNodes[mesh.idNode2].sigma
+          sigma3 = system.outerNodes[mesh.idNode3].sigma
+
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          
+          new_coef_vec[len(system.innerNodes) + mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a1+b3*b1)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a2+b3*b2)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a3+b3*b3)
+
+        elif mesh.isNode1Outer and not mesh.isNode2Outer:
+          x1 = system.outerNodes[mesh.idNode1].X
+          y1 = system.outerNodes[mesh.idNode1].Y
+          x2 = system.innerNodes[mesh.idNode2].X
+          y2 = system.innerNodes[mesh.idNode2].Y
+          x3 = system.outerNodes[mesh.idNode3].X
+          y3 = system.outerNodes[mesh.idNode3].Y
+          sigma1 = system.outerNodes[mesh.idNode1].sigma
+          sigma2 = system.innerNodes[mesh.idNode2].sigma
+          sigma3 = system.outerNodes[mesh.idNode3].sigma
+
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          
+          new_coef_vec[len(system.innerNodes) + mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a1+b3*b1)
+          new_coef_vec[mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a2+b3*b2)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a3+b3*b3)
+
+        elif not mesh.isNode1Outer and mesh.isNode2Outer:
+          x1 = system.innerNodes[mesh.idNode1].X
+          y1 = system.innerNodes[mesh.idNode1].Y
+          x2 = system.outerNodes[mesh.idNode2].X
+          y2 = system.outerNodes[mesh.idNode2].Y
+          x3 = system.outerNodes[mesh.idNode3].X
+          y3 = system.outerNodes[mesh.idNode3].Y
+          sigma1 = system.innerNodes[mesh.idNode1].sigma
+          sigma2 = system.outerNodes[mesh.idNode2].sigma
+          sigma3 = system.outerNodes[mesh.idNode3].sigma
+
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          
+          new_coef_vec[mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a1+b3*b1)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a2+b3*b2)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a3+b3*b3)
+
+        elif not mesh.isNode1Outer and not mesh.isNode2Outer:
+          x1 = system.innerNodes[mesh.idNode1].X
+          y1 = system.innerNodes[mesh.idNode1].Y
+          x2 = system.innerNodes[mesh.idNode2].X
+          y2 = system.innerNodes[mesh.idNode2].Y
+          x3 = system.outerNodes[mesh.idNode3].X
+          y3 = system.outerNodes[mesh.idNode3].Y
+          sigma1 = system.innerNodes[mesh.idNode1].sigma
+          sigma2 = system.innerNodes[mesh.idNode2].sigma
+          sigma3 = system.outerNodes[mesh.idNode3].sigma
+
+          S = abs(cross_product((x2-x1, y2-y1, 0.0), (x3-x1, y3-y1, 0.0))[2])
+          a1 = y2-y3
+          a2 = y3-y1
+          a3 = y1-y2
+          b1 = x3-x2
+          b2 = x1-x3
+          b3 = x2-x1
+          
+          new_coef_vec[mesh.idNode1] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a1+b3*b1)
+          new_coef_vec[mesh.idNode2] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a2+b3*b2)
+          new_coef_vec[len(system.innerNodes) + mesh.idNode3] += ((sigma1+sigma2+sigma3)/12*S)*(a3*a3+b3*b3)
+     
+    coefficient_matrix[len(system.innerNodes) + id, _] = coefficient_matrix[len(system.innerNodes) + id, _] + new_coef_vec.reshape(1, size(new_coef_vec).int)
 
   return coefficient_matrix
 
 proc draw_V(system: System) =
   ## ノード毎の電位を描写
-  # const colors = @[Color(r: 0.0, g: 0.0, b:0.0, a: 0.4)]
   let
     layout = Layout(title: "mesh", width: 600, height: 600,
                       xaxis: Axis(title: "x"),
@@ -831,24 +955,24 @@ proc draw_V(system: System) =
   Vmin = Vs[0]
   Vmax = Vs[0]
   for (i, v) in Vs.pairs():
-    #if v < Vmin:
-    #  Vmin = v
-    #if v > Vmax:
-    #  Vmax = v
+    if v < Vmin:
+      Vmin = v
+    if v > Vmax:
+      Vmax = v
 
-    if i < len(system.innerNodes):
-      if v < Vmin:
-        Vmin = v
-      if v > Vmax:
-        Vmax = v
+    #if i < len(system.innerNodes):
+    #  if v < Vmin:
+    #    Vmin = v
+    #  if v > Vmax:
+    #    Vmax = v
 
   for (i, v) in Vs.pairs():
-    #colors.add(Color(r: 0.1 + 0.9*((v-Vmin)/(Vmax-Vmin)), g: 0.1 + 0.9*((v-Vmin)/(Vmax-Vmin)), b: 0.2, a: 0.4))
+    colors.add(Color(r: 0.1 + 0.9*((v-Vmin)/(Vmax-Vmin)), g: 1.0 - 0.9*((v-Vmin)/(Vmax-Vmin)), b: 0.0, a: 0.4))
 
-    if i < len(system.innerNodes):
-      colors.add(Color(r: 1.0 - 0.9*((v-Vmin)/(Vmax-Vmin)), g: 0.1 + 0.9*((v-Vmin)/(Vmax-Vmin)), b: 0.0, a: 0.4))
-    else:
-      colors.add(Color(r: 0.0, g: 0.0, b: 0.0, a: 0.4))
+    #if i < len(system.innerNodes):
+    #  colors.add(Colorcolors.add(Color(r: 0.1 + 0.9*((v-Vmin)/(Vmax-Vmin)), g: 1.0 - 0.9*((v-Vmin)/(Vmax-Vmin)), b: 0.0, a: 0.4)))
+    #else:
+    #  colors.add(Color(r: 0.0, g: 0.0, b: 0.0, a: 0.4))
  
   d.marker = Marker[float](size: size, color: colors)
   var p = Plot[float](layout: layout)
@@ -859,9 +983,9 @@ proc draw_V(system: System) =
 #######################################
 
 const
-  numElectrodes = 24
+  numElectrodes = 64
   diameter = 10.0
-  num_inner_nodes = 18+12+6+1
+  num_inner_nodes = 48+32+16+1
   R1 = 7.5
   R2 = 5.0
   R3 = 2.5
@@ -883,12 +1007,12 @@ for i in 0..<(num_inner_nodes-1):
   #  if x^2 + y^2 < (diameter-gap)^2:
   #    newNodeXY = (x, y)
   #    break
-  if i < 18:
-    newNodeXY = (R1*cos((i/18)*2*PI), R1*sin((i/18)*2*PI))
-  elif i < 18+12:
-    newNodeXY = (R2*cos((i/12)*2*PI), R2*sin((i/12)*2*PI))
+  if i < 48:
+    newNodeXY = (R1*cos((i/48)*2*PI), R1*sin((i/48)*2*PI))
+  elif i < 48+32:
+    newNodeXY = (R2*cos((i/32)*2*PI), R2*sin((i/32)*2*PI))
   else:
-    newNodeXY = (R3*cos((i/6)*2*PI), R3*sin((i/6)*2*PI))
+    newNodeXY = (R3*cos((i/16)*2*PI), R3*sin((i/16)*2*PI))
     
   var newNode = InnerNode(X: newNodeXY[0], Y: newNodeXY[1], V: 0.0)
   #echo newNode
@@ -903,13 +1027,13 @@ var
   I: seq[float]
 for i in 0..<len(system.innerNodes) + len(system.outerNodes):
   I.add(0.0)
-for i in 6..<7:
-  I[len(system.innerNodes) + i] = 1.0
-for i in 18..<19:
-  I[len(system.innerNodes) + len(system.outerNodes) - (i+1)] = -1.0
+
+I[len(system.innerNodes) + 8] = 1.0
+I[len(system.innerNodes) + 40] = -1.0
 
 let V = F.pinv*I.toTensor # FV = I(0,..., 0, I1, ..., In)
 
+echo F
 echo V[len(system.innerNodes)..<len(system.innerNodes)+len(system.outerNodes)]
 echo I.toTensor
 
