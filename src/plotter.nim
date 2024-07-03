@@ -29,8 +29,6 @@ proc draw_vertices*(mesh: Mesh) =
   p = p.addTrace(d)
   p.show()
 
-
-
 proc draw_mesh*(mesh: Mesh) = 
   ## メッシュのエッジを描画
   const colors = @[Color(r: 0.0, g: 0.0, b:0.0, a: 0.0)]

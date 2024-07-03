@@ -48,12 +48,14 @@ var
   I: seq[float]
 for i in 0..<len(mesh2d.vertices):
   I.add(0.0)
-I[0] = 1.0
-I[18] = -1.0
+for i in 1..17:
+  I[i] = 1.0
+for i in 19..36:
+  I[i] = -1.0
 
-let V = stiffness_mat.pinv*I.toTensor # FV = I(0,..., 0, I1, ..., In)
-
+let V = solve(stiffness_mat, I.toTensor) # FV = I(I1, ..., In, 0, ..., 0)
 echo V
+
 for (i, vert) in mesh2d.vertices.mpairs():
   vert.V = V[i]
 

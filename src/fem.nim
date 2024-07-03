@@ -8,7 +8,7 @@
 ## 8. ヤコビアンJはエレメント毎に、 J[e] = R_e*K_e*V_e で求まる、詳しくはChatGPT様との会話参照
 ## 9. 一旦密行列計算で実装
 
-import std/[math, sequtils]
+import std/[sequtils]
 import arraymancer, results
 import mesh, calc
 
@@ -26,7 +26,7 @@ proc stiffness_mat_local_tri*(xy: Tensor[float]): Result[Tensor[float], Catchabl
   return (edges*edges.transpose / (4.0*area)).ok()
 
 proc stack_stiffness_mat_local_tri*(mesh: Mesh): Result[Tensor[float], CatchableError] =
-  ## 各三角形エレメントに対する局所剛性行列をスタックさせてエレメント数*3*3の行列を得る
+  ## 各三角形エレメントに対する局所剛性行列をスタックしてエレメント数*3*3の行列を得る
   var localStiffnessMat = zeros[float]([len(mesh.elements), 3, 3])
   
   for (i, element) in mesh.elements.pairs():
@@ -50,5 +50,5 @@ proc create_stiffness_mat*(mesh: Mesh, mat_local: Tensor[float]): Result[Tensor[
     
     for r in 0..<3:
       for c in 0..<3:
-        matrix[idxVerts[r], idxVerts[c]] = mat_local[i, r, c]
+        matrix[idxVerts[r], idxVerts[c]] += mat_local[i, r, c]
   return matrix.ok()
