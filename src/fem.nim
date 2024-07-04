@@ -51,6 +51,7 @@ proc create_stiffness_mat*(mesh: Mesh, mat_local: Tensor[float]): Result[Tensor[
     for r in 0..<3:
       for c in 0..<3:
         stiffnessMatrix[idxVerts[r], idxVerts[c]] += mat_local[i, r, c]
+  
   return stiffnessMatrix.ok()
 
 proc compute_jac_2d_tri*(mesh: Mesh, stiffnessMatrix: Tensor[float], stackedLocalStiffnessMatrix: Tensor[float]): Result[Tensor[float], CatchableError] =
@@ -62,22 +63,17 @@ proc compute_jac_2d_tri*(mesh: Mesh, stiffnessMatrix: Tensor[float], stackedLoca
 
   var
     Vs: seq[float]
-    σs: seq[float]
     jac = zeros[float]([mesh.numOuterVertices, len(mesh.elements)])
   let
     stiffMatInv = stiffnessMatrix.pinv[0..<mesh.numOuterVertices, _]
   for vertice in mesh.vertices.items:
     Vs.add(vertice.V)
-    σs.add(vertice.σ)
 
   for (i, element) in mesh.elements.pairs:
     let
       slicedStiffMatInv = concat(stiffMatInv[_, element.idxVertice1], stiffMatInv[_, element.idxVertice2], stiffMatInv[_, element.idxVertice3], axis=1)
-      unitLocalStiffnessMat = concat(stackedLocalStiffnessMatrix[i, 0, _]*σs[element.idxVertice1], stackedLocalStiffnessMatrix[i, 1, _]*σs[element.idxVertice2], stackedLocalStiffnessMatrix[i, 2, _]*σs[element.idxVertice3], axis=1).reshape(3, 3)
-    echo slicedStiffMatInv.shape
-    echo unitLocalStiffnessMat.shape
-    echo @[Vs[element.idxVertice1], Vs[element.idxVertice2], Vs[element.idxVertice3]].toTensor.shape
-    jac[_, i] = (-slicedStiffMatInv * unitLocalStiffnessMat * @[Vs[element.idxVertice1], Vs[element.idxVertice2], Vs[element.idxVertice3]].toTensor)
+      localStiffnessMat = concat(stackedLocalStiffnessMatrix[i, 0, _], stackedLocalStiffnessMatrix[i, 1, _], stackedLocalStiffnessMatrix[i, 2, _], axis=1).reshape(3, 3)
+    jac[_, i] = (-slicedStiffMatInv * localStiffnessMat * @[Vs[element.idxVertice1], Vs[element.idxVertice2], Vs[element.idxVertice3]].toTensor)
   
   return jac.ok()
     

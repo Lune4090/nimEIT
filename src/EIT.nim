@@ -38,23 +38,33 @@ draw_vertices(mesh2d)
 draw_mesh(mesh2d)
 
 let
-  stacked_local_stiffness_mat = stack_stiffness_mat_local_tri(mesh2d).value
-  stiffness_mat = create_stiffness_mat(mesh2d, stacked_local_stiffness_mat).value
+  stackedLocalStiffnessMat = stack_stiffness_mat_local_tri(mesh2d).value
+var  
+  unitStackedLocalStiffnessMat = zeros_like(stackedLocalStiffnessMat)
+
+# 無次元剛性行列に導電率を乗算
+var
+  σs: seq[float]
+for vertice in mesh2d.vertices.items:
+  σs.add(vertice.σ)
+for (i, element) in mesh2d.elements.pairs:
+  unitStackedLocalStiffnessMat[i, _] = stackedLocalStiffnessMat[i, _]*((σs[element.idxVertice1] + σs[element.idxVertice2] + σs[element.idxVertice3])/3)
+
+# set current
+for (i, vert) in mesh2d.vertices.mpairs:
+  if i mod 12 == 0:
+    vert.I = 1.0
+  elif i mod 12 == 6:
+    vert.I = -1.0
+  else:
+    vert.I = 0.0
 
 var
   I: seq[float]
-for i in 0..<len(mesh2d.vertices):
-  I.add(0.0)
-#for i in 1..17:
-#  I[i] = 1.0
-#for i in 19..36:
-#  I[i] = -1.0
-I[0] = 1.0
-I[6] = -1.0
-I[12] = 1.0
-I[18] = -1.0
-I[24] = 1.0
-I[30] = -1.0
+for (i, vert) in mesh2d.vertices.pairs:
+  I.add(vert.I)
+
+let stiffness_mat = create_stiffness_mat(mesh2d, unitStackedLocalStiffnessMat).value
 
 let V = solve(stiffness_mat, I.toTensor) # FV = I(I1, ..., In, 0, ..., 0)
 echo V
@@ -64,4 +74,4 @@ for (i, vert) in mesh2d.vertices.mpairs():
 
 draw_V(mesh2d)
 
-echo mesh2d.compute_jac_2d_tri(stiffness_mat, stacked_local_stiffness_mat).value
+let jac = mesh2d.compute_jac_2d_tri(stiffness_mat, unitStackedLocalStiffnessMat).value
