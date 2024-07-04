@@ -40,7 +40,8 @@ proc stack_stiffness_mat_local_tri*(mesh: Mesh): Result[Tensor[float], Catchable
   return localStiffnessMat.ok()
 
 proc create_stiffness_mat*(mesh: Mesh, mat_local: Tensor[float]): Result[Tensor[float], CatchableError] =
-  # エレメント数*3*3の局所剛性行列をスタックさせた行列を、頂点数*頂点数の密行列にマッピング
+  ## エレメント数*3*3の局所剛性行列をスタックさせた行列を、頂点数*頂点数の密行列にマッピング
+  ## 電位基準点を外周上の θ = π/2 の位置に設定、その行と列に対応する要素の内対角成分以外を0に、対角成分を1に設定
   var stiffnessMatrix = zeros[float]([len(mesh.vertices), len(mesh.vertices)])
   for (i, element) in mesh.elements.pairs():
     var idxVerts: seq[int]
@@ -51,29 +52,12 @@ proc create_stiffness_mat*(mesh: Mesh, mat_local: Tensor[float]): Result[Tensor[
     for r in 0..<3:
       for c in 0..<3:
         stiffnessMatrix[idxVerts[r], idxVerts[c]] += mat_local[i, r, c]
+
+  let idxReferenceVertice = (mesh.numOuterVertices div 4)
+
+  
+  stiffnessMatrix[idxReferenceVertice, _] = zeros_like(stiffnessMatrix[idxReferenceVertice, _])
+  stiffnessMatrix[_, idxReferenceVertice] = zeros_like(stiffnessMatrix[_, idxReferenceVertice])
+  stiffnessMatrix[idxReferenceVertice, idxReferenceVertice] = 1.0
   
   return stiffnessMatrix.ok()
-
-proc compute_jac_2d_tri*(mesh: Mesh, stiffnessMatrix: Tensor[float], stackedLocalStiffnessMatrix: Tensor[float]): Result[Tensor[float], CatchableError] =
-  if stiffnessMatrix.shape != [len(mesh.vertices), len(mesh.vertices)]:
-    return CatchableError(msg: "stiffnessMatrix's shape must be [len(mesh.vertices), len(mesh.vertices)]").err()
-
-  if stackedLocalStiffnessMatrix.shape != [len(mesh.elements), 3, 3]:
-    return CatchableError(msg: "stackedLocalStiffnessMatrix's shape must be [len(mesh.elements), 3, 3]").err()
-
-  var
-    Vs: seq[float]
-    jac = zeros[float]([mesh.numOuterVertices, len(mesh.elements)])
-  let
-    stiffMatInv = stiffnessMatrix.pinv[0..<mesh.numOuterVertices, _]
-  for vertice in mesh.vertices.items:
-    Vs.add(vertice.V)
-
-  for (i, element) in mesh.elements.pairs:
-    let
-      slicedStiffMatInv = concat(stiffMatInv[_, element.idxVertice1], stiffMatInv[_, element.idxVertice2], stiffMatInv[_, element.idxVertice3], axis=1)
-      localStiffnessMat = concat(stackedLocalStiffnessMatrix[i, 0, _], stackedLocalStiffnessMatrix[i, 1, _], stackedLocalStiffnessMatrix[i, 2, _], axis=1).reshape(3, 3)
-    jac[_, i] = (-slicedStiffMatInv * localStiffnessMat * @[Vs[element.idxVertice1], Vs[element.idxVertice2], Vs[element.idxVertice3]].toTensor)
-  
-  return jac.ok()
-    

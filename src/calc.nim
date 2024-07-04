@@ -32,3 +32,12 @@ func det2x2(t: Tensor[float]): Result[float, CatchableError] =
 
 func area_2d*(t: Tensor[float]): Result[float, CatchableError] = 
   return (0.5*abs(det2x2(t).value)).ok()
+
+proc diagonalize*(t: Tensor[float]): Result[Tensor[float], CatchableError] = 
+  if t.shape[0] != t.shape[1] and t.rank != 2:
+    return CatchableError(msg: "input must be square matrix!!").err()
+  var ans = zeros_like(t)
+  for i in 0..<t.shape[0]:
+    ans[i, i] = t[i, i]
+  
+  return ans.ok()

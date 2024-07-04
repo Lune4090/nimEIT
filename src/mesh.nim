@@ -9,7 +9,6 @@ type
     V*: float
     I*: float
     ΔV* = 0.0
-    ΔI* = 0.0
     isElectrode* = false
   
   Element* = object
@@ -17,7 +16,7 @@ type
     idxVertice1*: int
     idxVertice2*: int
     idxVertice3*: int
-    σ* = 1.0
+    σRef* = 1.0
     Δσ* = 0.0
 
   Mesh* = object
@@ -141,3 +140,8 @@ func delauney_method_mesh_update*(mesh: var Mesh, newVertice: Vertice2D) =
 
   # ダブリが生じないように最後に新しい頂点を加える
   mesh.vertices.add(newVertice)
+
+#func update(mesh: var Mesh, Vs: seq[float], Is: seq[float], σs: seq[float]) =
+#  for (i, element) in mesh.elements:
+#    element.Δσ = σs[i] - element.σ
+#    element.σ = σs[i]
