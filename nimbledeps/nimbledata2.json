@@ -110,6 +110,11 @@
         "e1fa31ad09f0199e93c1bf9959e1f3af5bdacc08": [
           {
             "path": "/home/lune/EIT"
+          },
+          {
+            "name": "datamancer",
+            "version": "0.4.6",
+            "checksum": "bc6933372278685ce1f8895cc6490b63bd7b421d"
           }
         ]
       }
@@ -192,6 +197,26 @@
     "plotly": {
       "0.3.3": {
         "a0687b7a917ebea721ceb9466125440074bac044": [
+          {
+            "path": "/home/lune/EIT"
+          }
+        ]
+      }
+    },
+    "seqmath": {
+      "0.2.2": {
+        "734340a5e463353b96c988e776df8b8760c099ec": [
+          {
+            "name": "datamancer",
+            "version": "0.4.6",
+            "checksum": "bc6933372278685ce1f8895cc6490b63bd7b421d"
+          }
+        ]
+      }
+    },
+    "datamancer": {
+      "0.4.6": {
+        "bc6933372278685ce1f8895cc6490b63bd7b421d": [
           {
             "path": "/home/lune/EIT"
           }

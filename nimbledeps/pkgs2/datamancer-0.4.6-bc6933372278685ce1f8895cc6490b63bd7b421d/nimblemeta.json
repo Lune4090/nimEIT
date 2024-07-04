@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/SciNim/datamancer",
+    "downloadMethod": "git",
+    "vcsRevision": "bfe0c88474e1b318c8bb22fd8b4ab07f21034047",
+    "files": [
+      "/datamancer/seq_tensor.nim",
+      "/datamancer/formula.nim",
+      "/datamancer/formulaExp.nim",
+      "/datamancer/column.nim",
+      "/datamancer/value.nim",
+      "/datamancer/formulaNameMacro.nim",
+      "/datamancer/serialize.nim",
+      "/datamancer/dataframe.nim",
+      "/datamancer/df_types.nim",
+      "/datamancer.nimble",
+      "/datamancer/gencase.nim",
+      "/datamancer/io.nim",
+      "/datamancer/ast_utils.nim",
+      "/datamancer.nim"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.4.6"
+    ]
+  }
+}

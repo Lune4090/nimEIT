@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/Vindaar/seqmath",
+    "downloadMethod": "git",
+    "vcsRevision": "74767bc93d5ef460a607c5224df82237cdb39ac5",
+    "files": [
+      "/seqmath/finance.nim",
+      "/seqmath/smath.nim",
+      "/seqmath/sutil.nim",
+      "/seqmath.nimble",
+      "/seqmath.nim"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.2.2"
+    ]
+  }
+}
