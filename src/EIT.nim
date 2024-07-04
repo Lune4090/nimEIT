@@ -132,12 +132,19 @@ if mode == 2:
     coef = jac.δσ_over_δV().value
     δσ = mesh2d.reconstruct_δσ(coef).value
   
+  
+  
   var
     errors: RunningStat
 
   for (i, elem) in mesh2d.elements.mpairs():
-    errors.push(abs(δσ[i] - elem.Δσ))
+    elem.δσ = δσ[i]
+    errors.push(abs(elem.δσ - elem.Δσ))
   
   echo errors
 
   # Backward-3. Get the reconstructed image !
+  
+  draw_Δσ(mesh2d)
+  draw_δσ(mesh2d)
+

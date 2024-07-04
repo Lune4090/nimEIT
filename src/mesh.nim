@@ -18,6 +18,7 @@ type
     idxVertice3*: int
     σRef* = 1.0
     Δσ* = 0.0
+    δσ* = 0.0
 
   Mesh* = object
     elements*: seq[Element]

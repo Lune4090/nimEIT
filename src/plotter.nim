@@ -11,17 +11,18 @@ proc draw_vertices*(mesh: Mesh) =
                       autosize:false)
     d = Trace[float](mode: PlotMode.Markers, `type`: PlotType.Scatter)
     size = @[16.float]
+  d.marker = Marker[float](size: size)
+  
   var
     p = Plot[float](layout:layout)
     xs: seq[float]
     ys: seq[float]
 
-
-  for element in mesh.vertices.items():
+  for vert in mesh.vertices.items():
     
-    d.marker = Marker[float](size: size)
-    xs.add(element.pos[0])
-    ys.add(element.pos[1])
+    
+    xs.add(vert.pos[0])
+    ys.add(vert.pos[1])
 
   d.xs = xs
   d.ys = ys
@@ -30,7 +31,7 @@ proc draw_vertices*(mesh: Mesh) =
   p.show()
 
 proc draw_mesh*(mesh: Mesh) = 
-  ## メッシュのエッジを描画
+  ## エレメントを描画
   const colors = @[Color(r: 0.0, g: 0.0, b:0.0, a: 0.0)]
   let
     layout = Layout(title: "mesh", width: 600, height: 600,
@@ -45,6 +46,7 @@ proc draw_mesh*(mesh: Mesh) =
       d = Trace[float](mode: PlotMode.Lines, `type`: PlotType.Scatter)
       size = @[16.float]
     d.marker = Marker[float](size: size, color: colors)
+    
     var
       xs: seq[float]
       ys: seq[float]
@@ -72,7 +74,7 @@ proc draw_mesh*(mesh: Mesh) =
   p.show()
 
 proc draw_V*(mesh: Mesh) =
-  ## ノード毎の電位を描写
+  ## エレメント毎の電位を描写
   # const colors = @[Color(r: 0.0, g: 0.0, b:0.0, a: 0.4)]
   let
     layout = Layout(title: "voltages", width: 600, height: 600,
@@ -112,3 +114,102 @@ proc draw_V*(mesh: Mesh) =
   var p = Plot[float](layout: layout)
   p = p.addTrace(d)
   p.show()
+
+proc draw_Δσ*(mesh: Mesh) = 
+  ## エレメントの中心を代表点として導電率変分を描画
+  # const colors = @[Color(r: 0.0, g: 0.0, b:0.0, a: 0.0)]
+  let
+    layout = Layout(title: "Δσ(actual conductivities change)", width: 600, height: 600,
+                      xaxis: Axis(title: "x"),
+                      yaxis: Axis(title: "y"), 
+                      autosize:false)
+    d = Trace[float](mode: PlotMode.Markers, `type`: PlotType.Scatter)
+    size = @[16.float]
+  var
+    p = Plot[float](layout:layout)
+    xs: seq[float]
+    ys: seq[float]
+    Δσs: seq[float]
+
+  for elem in mesh.elements.items():
+    var
+      p1 = mesh.vertices[elem.idxVertice1].pos
+      p2 = mesh.vertices[elem.idxVertice2].pos
+      p3 = mesh.vertices[elem.idxVertice3].pos
+      p0 = ((p1[0]+p2[0]+p3[0])/3, (p1[1]+p2[1]+p3[1])/3)
+    
+    xs.add(p0[0])
+    ys.add(p0[1])
+    Δσs.add(elem.Δσ)
+
+  d.xs = xs
+  d.ys = ys
+
+  var
+    Δσmin = Δσs[0]
+    Δσmax = Δσs[0]
+    colors: seq[Color]
+
+  for (i, Δσ) in Δσs.pairs():
+    if Δσ < Δσmin:
+      Δσmin = Δσ
+    if Δσ > Δσmax:
+      Δσmax = Δσ
+  
+  for (i, Δσ) in Δσs.pairs():
+    colors.add(Color(r: 0.1 + 0.9*((Δσ-Δσmin)/(Δσmax-Δσmin)), g: 1.0 - 0.9*((Δσ-Δσmin)/(Δσmax-Δσmin)), b: 0.0, a: 0.4))
+
+  d.marker = Marker[float](size: size, color: colors)
+    
+  p = p.addTrace(d)
+  p.show()
+
+proc draw_δσ*(mesh: Mesh) = 
+  ## エレメントの中心を代表点として導電率変分を描画
+  # const colors = @[Color(r: 0.0, g: 0.0, b:0.0, a: 0.0)]
+  let
+    layout = Layout(title: "δσ(estimated conductivities change)", width: 600, height: 600,
+                      xaxis: Axis(title: "x"),
+                      yaxis: Axis(title: "y"), 
+                      autosize:false)
+    d = Trace[float](mode: PlotMode.Markers, `type`: PlotType.Scatter)
+    size = @[16.float]
+  var
+    p = Plot[float](layout:layout)
+    xs: seq[float]
+    ys: seq[float]
+    δσs: seq[float]
+
+  for elem in mesh.elements.items():
+    var
+      p1 = mesh.vertices[elem.idxVertice1].pos
+      p2 = mesh.vertices[elem.idxVertice2].pos
+      p3 = mesh.vertices[elem.idxVertice3].pos
+      p0 = ((p1[0]+p2[0]+p3[0])/3, (p1[1]+p2[1]+p3[1])/3)
+    
+    xs.add(p0[0])
+    ys.add(p0[1])
+    δσs.add(elem.δσ)
+
+  d.xs = xs
+  d.ys = ys
+
+  var
+    δσmin = δσs[0]
+    δσmax = δσs[0]
+    colors: seq[Color]
+
+  for (i, δσ) in δσs.pairs():
+    if δσ < δσmin:
+      δσmin = δσ
+    if δσ > δσmax:
+      δσmax = δσ
+  
+  for (i, δσ) in δσs.pairs():
+    colors.add(Color(r: 0.1 + 0.9*((δσ-δσmin)/(δσmax-δσmin)), g: 1.0 - 0.9*((δσ-δσmin)/(δσmax-δσmin)), b: 0.0, a: 0.4))
+
+  d.marker = Marker[float](size: size, color: colors)
+    
+  p = p.addTrace(d)
+  p.show()
+
