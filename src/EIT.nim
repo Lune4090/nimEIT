@@ -88,6 +88,7 @@ draw_V(mesh2d)
 # 7. Calculate jacobian from global / local stiffness matrix and outer node's voltages
 let jac = mesh2d.compute_jac_2d_tri(stiffness_mat, unitStackedLocalStiffnessMat).value
 
+discard jac
 
 # 8. Converge RMS based on differential re-construction method with regularization term
 
