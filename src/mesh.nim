@@ -8,11 +8,14 @@ type
     pos*: (float, float)
     V*: float
     I*: float
-    sigma* = 1.0
+    σ* = 1.0
+    ΔV* = 0.0
+    ΔI* = 0.0
+    Δσ* = 0.0
     isElectrode* = false
   
   Element* = object
-    ## counter-clock-wiseに並んでいることを要請
+    ## counter-clock-wiseに並んでいることを要請する予定
     idxVertice1*: int
     idxVertice2*: int
     idxVertice3*: int
