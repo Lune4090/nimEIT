@@ -8,10 +8,8 @@ type
     pos*: (float, float)
     V*: float
     I*: float
-    σ* = 1.0
     ΔV* = 0.0
     ΔI* = 0.0
-    Δσ* = 0.0
     isElectrode* = false
   
   Element* = object
@@ -19,6 +17,8 @@ type
     idxVertice1*: int
     idxVertice2*: int
     idxVertice3*: int
+    σ* = 1.0
+    Δσ* = 0.0
 
   Mesh* = object
     elements*: seq[Element]
