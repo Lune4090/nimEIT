@@ -1,8 +1,7 @@
 ## Outerloop of FEM -> EIT calculation flow
 
-import std/[rdstdin, stats]
-import arraymancer except readCsv
-import datamancer, results
+import std/[rdstdin, stats, strutils]
+import arraymancer, db_connector/db_sqlite, results
 import setting, plotter, backward
 
 echo "Welcome to nimEIT! please choose the mode..."
@@ -14,7 +13,7 @@ var mode: int
 while true:
   let mode_num = readLineFromStdin("mode: ")
   if mode_num != "0" and mode_num != "1" and mode_num != "2":
-    echo "input is invalid, please try again"
+    echo "Input is invalid, please try again"
   if mode_num == "1":
     mode = 1
     break
@@ -23,7 +22,7 @@ while true:
     break
   if mode_num == "0":
     mode = 0
-    echo "good bye!"
+    echo "Good bye!"
     break
 
 if mode == 1:
@@ -50,7 +49,7 @@ if mode == 1:
     if (p0[0] - 0.0)^2 + (p0[1] - 5.0)^2 <= 2.0^2:
       element.σRef = 0.8
     if (p0[0] + 3.0)^2 + (p0[1] + 2.0)^2 <= 1.5^2:
-      element.σRef = 1.5
+      element.σRef = 2.0
   
 
   # modify I
@@ -82,19 +81,53 @@ if mode == 1:
   for (i, vert) in mesh2d.vertices.mpairs():
     vert.V = V[i]
 
-  echo "I: " & $I
-  echo "V: " & $V.toSeq1D
-  echo "σRef: " & $σRef
+  #echo "I: " & $I
+  #echo "V: " & $V.toSeq1D
+  #echo "σRef: " & $σRef
 
-  let csvName = readLineFromStdin("type data file name: ")
+  #[
+    データベースはメッシュ毎に分割する
+    SQLは仕様上、第一正規形でもNULLが許されないので、
+    テーブルはエレメントと頂点で分ける
+    PascalCaseにしているが要検討
+
+    TODO: 
+      タイプミスや誤った入力で変なdbやtableが作られないように
+      フォルダ内を調べて対象のファイルが無かったら警告を出すようにする
+  ]#
+
+  let
+    dbName = readLineFromStdin("database(mesh) name: ")
+    experimentID = readLineFromStdin("experiment id: ")
   
-  let df = toDf({
-    "I": I,
-    "V": V,
-    "σRef": σRef,
-  })
+  let db = open("data/created/" & $dbName & ".db", "", "", "")
 
-  df.write_csv("data/created/" & csvName & ".csv", precision = 16)
+  echo "Writing database..."
+    
+  db.exec(sql"""CREATE TABLE IF NOT EXISTS ElementTable (
+                ExperimentID INTEGER,
+                ElementID INTEGER,
+                σRef FLOAT
+            )""")
+  
+  db.exec(sql"""CREATE TABLE IF NOT EXISTS VerticeTable (
+                ExperimentID INTEGER,
+                VerticeID INTEGER,
+                I FLOAT,
+                V FLOAT
+            )""")
+
+  for (i, elem) in mesh2d.elements.pairs():    
+    db.exec(sql"INSERT INTO ElementTable (ExperimentID, ElementID, σRef) VALUES (?, ?, ?)",
+      $experimentID.parseInt, $i, $elem.σRef)
+
+  for (i, vert) in mesh2d.vertices.pairs():    
+    db.exec(sql"INSERT INTO VerticeTable (ExperimentID, VerticeID, I, V) VALUES (?, ?, ?, ?)",
+      $experimentID.parseInt, $i, $vert.I, $vert.V)
+
+  echo "Database is updated"
+
+  db.close()
 
   draw_V(mesh2d)
 
@@ -113,21 +146,44 @@ if mode == 2:
   var
     mesh2d = initial_setting(system)
   
-  # modify parameters
+  # read parameters
   
   let
-    csvName1 = readLineFromStdin("type 1st data file name: ")
-    df1 = read_csv("data/created/" & csvName1 & ".csv")
-    csVname2 = readLineFromStdin("type 2nd data file name: ")
-    df2 = read_csv("data/created/" & csvName2 & ".csv")
+    dbName = readLineFromStdin("Database(mesh) name: ")
+    experimentID0 = readLineFromStdin("Experiment id 1st: ")
+    experimentID1 = readLineFromStdin("Experiment id 2nd: ")
   
+  let db = open("data/created/" & $dbName & ".db", "", "", "")
+
+  echo "Reading database..."
+
+  var
+    I: seq[float]
+    V0: seq[float]
+    V1: seq[float]
+    σ0: seq[float]
+    σ1: seq[float]
+
+  for row in db.fastRows(sql"SELECT ExperimentID, σRef FROM ElementTable"):
+    if row[0].parseInt == experimentID0.parseInt:
+      σ0.add(row[1].parseFloat)
+    if row[0].parseInt == experimentID1.parseInt:
+      σ1.add(row[1].parseFloat)
+
+  for row in db.fastRows(sql"SELECT ExperimentID, I, V FROM VerticeTable"):
+    if row[0].parseInt == experimentID0.parseInt:
+      I.add(row[1].parseFloat)
+      V0.add(row[2].parseFloat)
+    if row[0].parseInt == experimentID1.parseInt:
+      V1.add(row[2].parseFloat)
+ 
   for (i, elem) in mesh2d.elements.mpairs():
-    elem.σRef = df1["σRef", i, float]
-    elem.Δσ = df2["σRef", i, float] - df1["σRef", i, float]
+    elem.σRef = σ0[i]
+    elem.Δσ = σ1[i] - σ0[i]
   for (i, vert) in mesh2d.vertices.mpairs():
-    vert.I = df1["I", i, float]
-    vert.V = df1["V", i, float]
-    vert.ΔV = df2["V", i, float]-df1["V", i, float]
+    vert.I = I[i]
+    vert.V = V0[i]
+    vert.ΔV = V1[i] - V0[i]
 
   # Get stiffness matrices
   var
@@ -142,9 +198,7 @@ if mode == 2:
   let
     coef = jac.δσ_over_δV().value
     δσ = mesh2d.reconstruct_δσ(coef).value
-  
-  
-  
+
   var
     errors: RunningStat
 

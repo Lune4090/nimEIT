@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/nim-lang/db_connector",
+    "downloadMethod": "git",
+    "vcsRevision": "70d2ab3ff9907cb5b1d863bfb333a0ced5ee1596",
+    "files": [
+      "/db_connector/sqlite3.nim",
+      "/db_connector/db_sqlite.nim",
+      "/db_connector.nimble",
+      "/db_connector/db_common.nim",
+      "/db_connector/mysql.nim",
+      "/db_connector/postgres.nim",
+      "/db_connector/db_postgres.nim",
+      "/db_connector/db_mysql.nim",
+      "/db_connector/private/dbutils.nim",
+      "/db_connector/odbcsql.nim",
+      "/db_connector/db_odbc.nim"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "0.1.0"
+    ]
+  }
+}
