@@ -1,6 +1,6 @@
 ## Outerloop of FEM -> EIT calculation flow
 
-import std/[rdstdin, stats, strutils]
+import std/[rdstdin, strutils]
 import arraymancer, db_connector/db_sqlite, results
 import setting, plotter, backward
 
@@ -11,7 +11,7 @@ echo "0: exit"
 
 var mode: int
 while true:
-  let mode_num = readLineFromStdin("mode: ")
+  let mode_num = readLineFromStdin("Mode: ")
   if mode_num != "0" and mode_num != "1" and mode_num != "2":
     echo "Input is invalid, please try again"
   if mode_num == "1":
@@ -97,8 +97,8 @@ if mode == 1:
   ]#
 
   let
-    dbName = readLineFromStdin("database(mesh) name: ")
-    experimentID = readLineFromStdin("experiment id: ")
+    dbName = readLineFromStdin("Database(mesh) name: ")
+    experimentID = readLineFromStdin("Experiment id: ")
   
   let db = open("data/created/" & $dbName & ".db", "", "", "")
 
@@ -176,6 +176,8 @@ if mode == 2:
       V0.add(row[2].parseFloat)
     if row[0].parseInt == experimentID1.parseInt:
       V1.add(row[2].parseFloat)
+
+  db.close()
  
   for (i, elem) in mesh2d.elements.mpairs():
     elem.σRef = σ0[i]
@@ -199,14 +201,14 @@ if mode == 2:
     coef = jac.δσ_over_δV().value
     δσ = mesh2d.reconstruct_δσ(coef).value
 
-  var
-    errors: RunningStat
+  #var
+  #  errors: RunningStat
 
   for (i, elem) in mesh2d.elements.mpairs():
     elem.δσ = δσ[i]
-    errors.push(abs(elem.δσ - elem.Δσ))
+  #  errors.push(abs(elem.δσ - elem.Δσ))
   
-  echo errors
+  #echo errors
 
   # Backward-3. Get the reconstructed image !
   
