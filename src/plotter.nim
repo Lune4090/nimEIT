@@ -115,7 +115,7 @@ proc draw_V*(mesh: Mesh) =
   p = p.addTrace(d)
   p.show()
 
-proc draw_Δσ*(mesh: Mesh) = 
+proc draw_Δσ*(mesh: Mesh, title = "Δσ(actual conductivities change)") = 
   ## エレメントの中心を代表点として導電率変分を描画
   # const colors = @[Color(r: 0.0, g: 0.0, b:0.0, a: 0.0)]
   let
@@ -164,7 +164,7 @@ proc draw_Δσ*(mesh: Mesh) =
   p = p.addTrace(d)
   p.show()
 
-proc draw_δσ*(mesh: Mesh) = 
+proc draw_δσ*(mesh: Mesh, title = "δσ(estimated conductivities change)") = 
   ## エレメントの中心を代表点として導電率変分を描画
   # const colors = @[Color(r: 0.0, g: 0.0, b:0.0, a: 0.0)]
   let

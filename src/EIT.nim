@@ -1,6 +1,6 @@
 ## Outerloop of FEM -> EIT calculation flow
 
-import std/[rdstdin, strutils, os]
+import std/[rdstdin, strutils, sequtils, os]
 import arraymancer, db_connector/db_sqlite, results
 import setting, plotter, backward
 
@@ -56,15 +56,15 @@ if mode == 11:
       p3 = mesh2d.vertices[element.idxVertice3].pos
       p0 = ((p1[0]+p2[0]+p3[0])/3, (p1[1]+p2[1]+p3[1])/3)
     if (p0[0] - 0.0)^2 + (p0[1] - 5.0)^2 <= 2.0^2:
-      element.σRef = 0.8
+      element.σRef = 1.0 #0.8
     if (p0[0] + 3.0)^2 + (p0[1] + 2.0)^2 <= 1.5^2:
-      element.σRef = 2.0
+      element.σRef = 1.0 #2.0
 
   # modify I
   for (i, vert) in mesh2d.vertices.mpairs():
-    if i == 15:
+    if i == 45:
       vert.I = 1.0
-    elif i == 75:
+    elif i == 105:
       vert.I = -1.0
     else:
       vert.I = 0.0
@@ -114,16 +114,16 @@ if mode == 12:
       p3 = mesh2d.vertices[element.idxVertice3].pos
       p0 = ((p1[0]+p2[0]+p3[0])/3, (p1[1]+p2[1]+p3[1])/3)
     if (p0[0] - 0.0)^2 + (p0[1] - 5.0)^2 <= 2.0^2:
-      element.σRef = 1.0
+      element.σRef = 0.8 #0.8
     if (p0[0] + 3.0)^2 + (p0[1] + 2.0)^2 <= 1.5^2:
-      element.σRef = 1.0
+      element.σRef = 2.0 #2.0
   
 
   # modify I
   for (i, vert) in mesh2d.vertices.mpairs():
-    if i == 15:
+    if i == 105:
       vert.I = 1.0
-    elif i == 75:
+    elif i == 45:
       vert.I = -1.0
     else:
       vert.I = 0.0
@@ -378,6 +378,9 @@ if mode == 22:
   if len(experimentIDs0) != len(experimentIDs1):
     echo "length of experimentID (1st/2nd) is not same, check it again"
   else:
+    var
+      δσs: seq[seq[float]]
+
     for i in 0..<len(experimentIDs0):
       let
         experimentID0 = experimentIDs0[i]
@@ -407,13 +410,13 @@ if mode == 22:
 
       db.close()
     
-      for (i, elem) in mesh2d.elements.mpairs():
-        elem.σRef = σ0[i]
-        elem.Δσ = σ1[i] - σ0[i]
-      for (i, vert) in mesh2d.vertices.mpairs():
-        vert.I = I[i]
-        vert.V = V0[i]
-        vert.ΔV = V1[i] - V0[i]
+      for (j, elem) in mesh2d.elements.mpairs():
+        elem.σRef = σ0[j]
+        elem.Δσ = σ1[j] - σ0[j]
+      for (j, vert) in mesh2d.vertices.mpairs():
+        vert.I = I[j]
+        vert.V = V0[j]
+        vert.ΔV = V1[j] - V0[j]
 
       # Get stiffness matrices
       var
@@ -429,16 +432,33 @@ if mode == 22:
         coef = jac.δσ_over_δV().value
         δσ = mesh2d.reconstruct_δσ(coef).value
 
-      #var
-      #  errors: RunningStat
+      var RMS = 0.0
+      for (j, elem) in mesh2d.elements.mpairs():
+        elem.δσ = δσ[j]
+        RMS += (elem.Δσ - elem.δσ)^2
+      RMS = RMS/len(mesh2d.elements).float
 
-      for (i, elem) in mesh2d.elements.mpairs():
-        elem.δσ = δσ[i]
-      #  errors.push(abs(elem.δσ - elem.Δσ))
+      echo "RMS(" & $i & "): " & $RMS
       
-      #echo errors
-
       # Backward-3. Get the reconstructed image !
+      δσs.add(δσ.toSeq1D)      
       
-      draw_Δσ(mesh2d)
       draw_δσ(mesh2d)
+    
+    
+    var δσ_mean = repeat(0.0, len(δσs[0]))
+    for j in 0..<len(δσs[0]):
+      for i in 0..<len(δσs):
+        δσ_mean[j] += δσs[i][j]
+      δσ_mean[j] = δσ_mean[j]/len(δσs).float
+
+    var RMS = 0.0
+    for (i, elem) in mesh2d.elements.mpairs():
+      elem.δσ = δσ_mean[i]
+      RMS += (elem.Δσ - elem.δσ)^2
+    RMS = RMS/len(mesh2d.elements).float
+    echo "RMS (last): " & $RMS
+
+    draw_Δσ(mesh2d)
+    draw_δσ(mesh2d, title = "δσ_mean(mean of estimated conductivities change)")
+    
