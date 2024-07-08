@@ -435,7 +435,7 @@ if mode == 22:
       var RMS = 0.0
       for (j, elem) in mesh2d.elements.mpairs():
         elem.δσ = δσ[j]
-        RMS += (elem.Δσ - elem.δσ)^2
+        RMS += sqrt((elem.Δσ - elem.δσ)^2)
       RMS = RMS/len(mesh2d.elements).float
 
       echo "RMS(" & $i & "): " & $RMS
@@ -455,7 +455,7 @@ if mode == 22:
     var RMS = 0.0
     for (i, elem) in mesh2d.elements.mpairs():
       elem.δσ = δσ_mean[i]
-      RMS += (elem.Δσ - elem.δσ)^2
+      RMS += sqrt((elem.Δσ - elem.δσ)^2)
     RMS = RMS/len(mesh2d.elements).float
     echo "RMS (last): " & $RMS
 
