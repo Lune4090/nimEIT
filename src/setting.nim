@@ -54,7 +54,7 @@ proc get_stiffness_matrices*(mesh2d: Mesh): (Tensor[float], Tensor[float], Tenso
   # Initial-4. Multiply σRef(conductivity) to non-unit local stiffness matrix for each element
 
   for (i, element) in mesh2d.elements.pairs:
-    unitStackedLocalStiffnessMat[i, _] = stackedLocalStiffnessMat[i, _]*element.σRef
+    unitStackedLocalStiffnessMat[i, _] = stackedLocalStiffnessMat[i, _]*element.σRef # ここで伝導率の初期推定値への依存が発生
 
   # Initial-5. Map local stiffness matrix with conductivity to global large denes stiffness matrix
 

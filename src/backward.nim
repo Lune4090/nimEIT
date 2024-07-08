@@ -2,8 +2,10 @@ import std/[math, sugar]
 import arraymancer, results
 import mesh, calc
 
-proc δσ_over_δV*(jac: Tensor[float], α = 0.1, p = 1.0): Result[Tensor[float], CatchableError] =
+proc δσ_over_δV*(jac: Tensor[float], α = 1.0, p = 1.0): Result[Tensor[float], CatchableError] =
   ## https://ieeexplore.ieee.org/document/6971063/
+  ## α: Tikhonovの正則化項の係数
+  ## p: Newton-Raphson法に基づく正則化行列のスケーリング項
   let
     JtJ = jac.transpose*jac
     Q = (diagonalize(JtJ).value).map(x => x.pow(p))

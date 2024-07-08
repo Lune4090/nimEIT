@@ -1,6 +1,6 @@
 ## Outerloop of FEM -> EIT calculation flow
-
-import std/[rdstdin, strutils, sequtils, os]
+# 逆問題のプログラム、δ0を利用してなくない?
+import std/[rdstdin, strutils, sequtils, os, random]
 import arraymancer, db_connector/db_sqlite, results
 import setting, plotter, backward
 
@@ -45,7 +45,7 @@ if mode == 11:
 
   # Initial setting
   var
-    mesh2d = initial_setting(system)
+    mesh2d = initial_setting(system, drawVert = true, drawMesh = true)
 
   # TODO: 外部の何かしらのファイル(txt?)から自動的に一定領域内のメッシュの導電率を変えられるようにする
   # modify σRef
@@ -62,9 +62,9 @@ if mode == 11:
 
   # modify I
   for (i, vert) in mesh2d.vertices.mpairs():
-    if i == 45:
+    if i == 0:
       vert.I = 1.0
-    elif i == 105:
+    elif i == 60:
       vert.I = -1.0
     else:
       vert.I = 0.0
@@ -249,13 +249,33 @@ if mode == 21:
 
   db.close()
  
+  # ちょっと試験的に伝導率の事前推定や計測電圧にランダムノイズを載せてみる
+  randomize()
+
   for (i, elem) in mesh2d.elements.mpairs():
     elem.σRef = σ0[i]
     elem.Δσ = σ1[i] - σ0[i]
   for (i, vert) in mesh2d.vertices.mpairs():
-    vert.I = I[i]
-    vert.V = V0[i]
-    vert.ΔV = V1[i] - V0[i]
+    #vert.I = I[i]
+    #vert.V = V0[i]
+    #vert.ΔV = V1[i] - V0[i]
+    let
+      noise1 = gauss(sigma = 0.002) # 変化前電圧に乗るノイズ, α = 0.1では0.001前後が限界、0.002では完全に再構築が失敗する
+      #noise2 = gauss(sigma = 0.001) # 変化後電圧に乗るノイズ
+    vert.V = V0[i] + noise1
+    vert.ΔV = V1[i] - V0[i] + noise1
+
+  # 初期伝導率推定を1桁誤った領域を作っても、アーティファクトは見えるけど大枠の導電率分布には意外とそこまで影響しないっぽい
+  for elem in mesh2d.elements.mitems():
+    var
+      p1 = mesh2d.vertices[elem.idxVertice1].pos
+      p2 = mesh2d.vertices[elem.idxVertice2].pos
+      p3 = mesh2d.vertices[elem.idxVertice3].pos
+      p0 = ((p1[0]+p2[0]+p3[0])/3, (p1[1]+p2[1]+p3[1])/3)
+
+    if (p0[0] - 3.0)^2 + (p0[1] - 0.0)^2 <= 2.0^2:
+      elem.Δσ += (1.0 - elem.σRef)
+      elem.σRef = 1.0
 
   # Get stiffness matrices
   var
@@ -271,16 +291,14 @@ if mode == 21:
     coef = jac.δσ_over_δV().value
     δσ = mesh2d.reconstruct_δσ(coef).value
 
-  #var
-  #  errors: RunningStat
-
-  for (i, elem) in mesh2d.elements.mpairs():
-    elem.δσ = δσ[i]
-  #  errors.push(abs(elem.δσ - elem.Δσ))
+  var RMS = 0.0
+  for (j, elem) in mesh2d.elements.mpairs():
+    elem.δσ = δσ[j]
+    RMS += sqrt((elem.Δσ - elem.δσ)^2)
+  RMS = RMS/len(mesh2d.elements).float
+  echo "RMS: " & $RMS
   
-  #echo errors
-
-  # Backward-3. Get the reconstructed image !
+# Backward-3. Get the reconstructed image !
   
   draw_Δσ(mesh2d)
   draw_δσ(mesh2d)
