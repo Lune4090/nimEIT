@@ -112,6 +112,9 @@
             "name": "datamancer",
             "version": "0.4.6",
             "checksum": "bc6933372278685ce1f8895cc6490b63bd7b421d"
+          },
+          {
+            "path": "/Users/lune/EIT"
           }
         ]
       }
@@ -189,6 +192,42 @@
             "name": "datamancer",
             "version": "0.4.6",
             "checksum": "bc6933372278685ce1f8895cc6490b63bd7b421d"
+          }
+        ]
+      }
+    },
+    "datamancer": {
+      "0.4.6": {
+        "bc6933372278685ce1f8895cc6490b63bd7b421d": [
+          {
+            "path": "/Users/lune/EIT"
+          }
+        ]
+      }
+    },
+    "db_connector": {
+      "0.1.0": {
+        "d68319e3785fa937f0465ea915e942b61b6b5442": [
+          {
+            "path": "/Users/lune/EIT"
+          }
+        ]
+      }
+    },
+    "plotly": {
+      "0.3.3": {
+        "a0687b7a917ebea721ceb9466125440074bac044": [
+          {
+            "path": "/Users/lune/EIT"
+          }
+        ]
+      }
+    },
+    "results": {
+      "0.4.0": {
+        "f5971c64ccb600d34df5a162cad32e262f8d84f9": [
+          {
+            "path": "/Users/lune/EIT"
           }
         ]
       }
