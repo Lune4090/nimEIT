@@ -62,9 +62,9 @@ if mode == 11:
 
   # modify I
   for (i, vert) in mesh2d.vertices.mpairs():
-    if i == 0:
+    if i == 0 or i == 45:
       vert.I = 1.0
-    elif i == 60:
+    elif i == 60 or i == 105:
       vert.I = -1.0
     else:
       vert.I = 0.0
@@ -250,6 +250,7 @@ if mode == 21:
   db.close()
  
   # ちょっと試験的に伝導率の事前推定や計測電圧にランダムノイズを載せてみる
+  # TODO: SNRを定義(1o*log(mean(signal^2)/mean(noise^2)))通りに計算して出力
   randomize()
 
   for (i, elem) in mesh2d.elements.mpairs():
