@@ -3,13 +3,13 @@ import arraymancer, results
 import plotter, mesh, forward
 
 type
-  Parameters* = object
+  MeshParams* = object
     numElectrodes*: int
     diameter*: float
     numsInnerVertices*: seq[int]
     diameters*: seq[float]
-
-proc initial_setting*(system: Parameters, drawVert = false, drawMesh = false): Mesh =
+  
+proc generate_mesh*(system: MeshParams, drawVert = false, drawMesh = false): Mesh =
   ## input: Parameters
   ## output: Mesh
   

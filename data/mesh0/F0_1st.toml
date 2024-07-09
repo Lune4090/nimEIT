@@ -1,0 +1,8 @@
+[sigmas]
+  centers = [[0.0, 0.0]]
+  Rs = [0.0]
+  sigmaRefs = [1.0]
+
+[Is]
+  verts = [0, 60]
+  Is = [1.0, -1.0]

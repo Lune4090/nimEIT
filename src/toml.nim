@@ -1,0 +1,83 @@
+import results, parsetoml
+import setting
+
+proc mesh_params_from_toml*(path: string): Result[MeshParams, CatchableError] =
+  let table = parseFile(path)
+  if not table["params"].hasKey("numElectrodes"):
+    return CatchableError(msg: ".toml format is invalid, numElectrodes is not found.").err()
+  if not table["params"].hasKey("diameter"):
+    return CatchableError(msg: ".toml format is invalid, diameter is not found.").err()
+  if not table["params"].hasKey("numElectrodes"):
+    return CatchableError(msg: ".toml format is invalid, numsInnerVertices is not found.").err()
+  if not table["params"].hasKey("numElectrodes"):
+    return CatchableError(msg: ".toml format is invalid, diameters is not found.").err()
+  var
+    numElectrodes = table["params"]["numElectrodes"].getInt 
+    diameter = table["params"]["diameter"].getFloat
+    numsInnerVertices: seq[int]
+    diameters: seq[float]
+  
+  for i in 0..<len(table["params"]["numsInnerVertices"]):
+    numsInnerVertices.add(table["params"]["numsInnerVertices"][i].getInt)
+  for i in 0..<len(table["params"]["diameters"]):
+    diameters.add(table["params"]["diameters"][i].getFloat)
+  
+  return MeshParams(numElectrodes: numElectrodes, diameter: diameter, numsInnerVertices: numsInnerVertices, diameters: diameters).ok()
+
+proc σRefs_from_toml*(path: string): Result[(seq[(float, float)], seq[float], seq[float]), CatchableError] =
+  let table = parseFile(path)
+  if not table["sigmas"].hasKey("centers"):
+    return CatchableError(msg: ".toml format is invalid, centers is not found.").err()
+  if not table["sigmas"].hasKey("Rs"):
+    return CatchableError(msg: ".toml format is invalid, Rs is not found.").err()
+  if not table["sigmas"].hasKey("sigmaRefs"):
+    return CatchableError(msg: ".toml format is invalid, sigmaRefs is not found.").err()
+  var
+    centers: seq[(float, float)]
+    Rs: seq[float]
+    σRefs: seq[float]
+
+  for i in 0..<len(table["sigmas"]["centers"]):
+    centers.add((table["sigmas"]["centers"][i][0].getFloat, table["sigmas"]["centers"][i][1].getFloat))
+  for i in 0..<len(table["sigmas"]["Rs"]):
+    Rs.add(table["sigmas"]["Rs"][i].getFloat)
+  for i in 0..<len(table["sigmas"]["sigmaRefs"]):
+    σRefs.add(table["sigmas"]["sigmaRefs"][i].getFloat)
+  
+  return (centers, Rs, σRefs).ok()
+
+proc Is_from_toml*(path: string): Result[(seq[int], seq[float]), CatchableError] =
+  let table = parseFile(path)
+  if not table["Is"].hasKey("verts"):
+    return CatchableError(msg: ".toml format is invalid, verts is not found.").err()
+  if not table["Is"].hasKey("Is"):
+    return CatchableError(msg: ".toml format is invalid, Is is not found.").err()
+
+  var
+    verts: seq[int]
+    Is: seq[float]
+
+  for i in 0..<len(table["Is"]["verts"]):
+    verts.add(table["Is"]["verts"][i].getInt)
+  for i in 0..<len(table["Is"]["Is"]):
+    Is.add(table["Is"]["Is"][i].getFloat)
+  
+  return (verts, Is).ok()
+
+proc experimentIDs_from_toml*(path: string): Result[(seq[int], seq[int]), CatchableError] =
+  let table = parseFile(path)
+  if not table["input"].hasKey("1stExperimentIDs"):
+    return CatchableError(msg: ".toml format is invalid, 1stExperimentIDs is not found.").err()
+  if not table["input"].hasKey("2ndExperimentIDs"):
+    return CatchableError(msg: ".toml format is invalid, 2ndExperimentIDs is not found.").err()
+
+  var
+    experimentIDs0: seq[int]
+    experimentIDs1: seq[int]
+    
+  for i in 0..<len(table["input"]["1stExperimentIDs"]):
+    experimentIDs0.add(table["input"]["1stExperimentIDs"][i].getInt)
+  for i in 0..<len(table["input"]["2ndExperimentIDs"]):
+    experimentIDs1.add(table["input"]["2ndExperimentIDs"][i].getInt)
+  
+  return (experimentIDs0, experimentIDs1).ok()

@@ -10,4 +10,4 @@ bin           = @["EIT"]
 
 # Dependencies
 
-requires "nim >= 2.0.4", "arraymancer", "datamancer", "db_connector", "plotly", "results"
+requires "nim >= 2.0.4", "arraymancer", "parsetoml", "db_connector", "plotly", "results"

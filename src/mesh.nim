@@ -25,6 +25,21 @@ type
     vertices*: seq[Vertice2D]
     numOuterVertices*: int
 
+func modify_σRef_circle_region*(mesh: var Mesh, centers: seq[(float, float)], Rs: seq[float], σRefs: seq[float]) =
+  for i in 0..<len(centers):
+    for element in mesh.elements.mitems():
+      var
+        p1 = mesh.vertices[element.idxVertice1].pos
+        p2 = mesh.vertices[element.idxVertice2].pos
+        p3 = mesh.vertices[element.idxVertice3].pos
+        p0 = ((p1[0]+p2[0]+p3[0])/3, (p1[1]+p2[1]+p3[1])/3)
+      if (p0[0] - centers[i][0])^2 + (p0[1] - centers[i][1])^2 <= Rs[i]^2:
+        element.σRef = σRefs[i]
+
+func modify_I*(mesh: var Mesh, verts: seq[int], Is: seq[float]) =
+  for i in 0..<len(verts):
+    mesh.vertices[verts[i]].I = Is[i]
+    
 func generate_outer_vertices(num_outer_vertices: int, R: float): Result[seq[Vertice2D], CatchableError] = 
   ## 円形状で一定間隔で電極扱いのノードを形成
   if num_outer_vertices <= 1:
