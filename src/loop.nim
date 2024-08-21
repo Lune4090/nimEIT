@@ -1,4 +1,4 @@
-import std/[rdstdin, strutils, sequtils, os]
+import std/[rdstdin, strutils, sequtils, os, random, tables]
 import arraymancer, db_connector/db_sqlite, results
 import setting, plotter, backward, mesh, database, toml
 
@@ -43,19 +43,6 @@ proc forward_loop*(preserve_data: bool, meshName: string, settingFileName: strin
 
 
 proc backward_loop*(meshName: string) =
-  
-  # TODO: 伝導率・電位のダミーデータを再び流せるように変更
-  ## 初期伝導率推定を1桁誤った領域を作っても、アーティファクトは見えるけど大枠の導電率分布には意外とそこまで影響しないっぽい
-  #for elem in mesh2d.elements.mitems():
-  #  var
-  #    p1 = mesh2d.vertices[elem.idxVertice1].pos
-  #    p2 = mesh2d.vertices[elem.idxVertice2].pos
-  #    p3 = mesh2d.vertices[elem.idxVertice3].pos
-  #    p0 = ((p1[0]+p2[0]+p3[0])/3, (p1[1]+p2[1]+p3[1])/3)
-  #  if (p0[0] - 3.0)^2 + (p0[1] - 0.0)^2 <= 2.0^2:
-  #    elem.Δσ += (1.0 - elem.σRef)
-  #    elem.σRef = 1.0
-  # Define simulation parameters
 
   # Get mesh data
   let
@@ -74,7 +61,6 @@ proc backward_loop*(meshName: string) =
     experimentIDs0: seq[int]
     experimentIDs1: seq[int]
 
-  echo "data/" & meshName & "/" & inputTomlName & ".toml"
   (experimentIDs0, experimentIDs1) = experimentIDs_from_toml("data/" & meshName & "/" & inputTomlName & ".toml").value()
   
   if len(experimentIDs0) != len(experimentIDs1):
@@ -111,6 +97,20 @@ proc backward_loop*(meshName: string) =
       if row[0].parseInt == experimentID1:
         V1.add(row[2].parseFloat)
 
+    # ノイズの導入
+    var errors = intentional_error_from_toml("data/" & meshName & "/" & inputTomlName & ".toml").value()
+    for error in errors.keys():
+      if error == "Vs":
+        if errors["Vs"]["type"] == "Gaussian":
+          let
+            mu = errors["Vs"]["mu"].parseFloat
+            sigma = errors["Vs"]["sigma"].parseFloat
+          echo "Add gaussian noise to voltages..."
+          for V in V0.mitems():
+            V = V + gauss(mu = mu, sigma = sigma)
+          for V in V1.mitems():
+            V = V + gauss(mu = mu, sigma = sigma)
+
     db.close()
   
     for (j, elem) in mesh2d.elements.mpairs():
@@ -122,9 +122,7 @@ proc backward_loop*(meshName: string) =
       vert.ΔV = V1[j] - V0[j]
 
     # Get stiffness matrices
-    var
-      (stackedLocalStiffnessMat, unitStackedLocalStiffnessMat, stiffness_mat) = get_stiffness_matrices(mesh2d)
-
+    var (stackedLocalStiffnessMat, unitStackedLocalStiffnessMat, stiffness_mat) = get_stiffness_matrices(mesh2d)
     discard stackedLocalStiffnessMat
 
     # Backward-1. Calculate jacobian from global / local stiffness matrix and outer node's voltages

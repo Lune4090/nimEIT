@@ -1,3 +1,4 @@
+import tables
 import results, parsetoml
 import setting
 
@@ -81,3 +82,22 @@ proc experimentIDs_from_toml*(path: string): Result[(seq[int], seq[int]), Catcha
     experimentIDs1.add(table["input"]["2ndExperimentIDs"][i].getInt)
   
   return (experimentIDs0, experimentIDs1).ok()
+
+proc intentional_error_from_toml*(path: string): Result[(Table[string, Table[string, string]]), CatchableError] =
+  let table = parseFile(path)
+  if table.hasKey("error"):
+    var
+      errors: Table[string, Table[string, string]]
+    
+    # エラーを導入する
+    if table["error"].hasKey("Vs"):
+      echo "Inducing a posterior errors..."
+      # とりあえずガウシアンノイズだけ実装
+      if table["error"]["Vs"].hasKey("Gaussian"):
+        errors["Vs"] = {
+          "type": "Gaussian", 
+          "mu": $table["error"]["Vs"]["Gaussian"]["mu"].getFloat,
+          "sigma": $table["error"]["Vs"]["Gaussian"]["sigma"].getFloat,
+        }.toTable
+    
+    return errors.ok()

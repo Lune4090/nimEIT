@@ -1,0 +1,9 @@
+[input]
+  1stExperimentIDs = [0,]
+  2ndExperimentIDs = [1,]
+
+[error]
+[error.Vs]
+[error.Vs.Gaussian]
+  mu = 1.0
+  sigma = 0.001
