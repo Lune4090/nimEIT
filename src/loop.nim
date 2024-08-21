@@ -37,7 +37,7 @@ proc forward_loop*(preserve_data: bool, meshName: string, settingFileName: strin
   for (i, vert) in mesh2d.vertices.mpairs():
     vert.V = V[i]
   
-  draw_V(mesh2d)
+  draw_V(mesh2d, (1000, 1000), ((-meshParams.diameter, -meshParams.diameter), (meshParams.diameter, meshParams.diameter)))
 
   if preserve_data: update_database(mesh2d, meshName)
 
@@ -146,7 +146,7 @@ proc backward_loop*(meshName: string) =
     # Backward-3. Get the reconstructed image !
     δσs.add(δσ.toSeq1D)      
     
-    draw_δσ(mesh2d)
+    draw_δσ(mesh2d, (1000, 1000), ((-meshParams.diameter, -meshParams.diameter), (meshParams.diameter, meshParams.diameter)))
   
   
   var δσ_mean = repeat(0.0, len(δσs[0]))
@@ -162,6 +162,6 @@ proc backward_loop*(meshName: string) =
   RMS = RMS/len(mesh2d.elements).float
   echo "RMS (last): " & $RMS
 
-  draw_Δσ(mesh2d)
-  draw_δσ(mesh2d, title = "δσ_mean(mean of estimated conductivities change)")
+  draw_Δσ(mesh2d, (1000, 1000), ((-meshParams.diameter, -meshParams.diameter), (meshParams.diameter, meshParams.diameter)))
+  draw_δσ(mesh2d, (1000, 1000), ((-meshParams.diameter, -meshParams.diameter), (meshParams.diameter, meshParams.diameter)), title = "δσ_mean(mean of estimated conductivities change)")
   

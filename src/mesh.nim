@@ -57,7 +57,6 @@ func generate_outer_vertices(num_outer_vertices: int, R: float): Result[seq[Vert
   return vertices.ok()
 
 func generate_mesh_circle*(num_outer_vertices: int, R: float): Result[Mesh, CatchableError] =
-  ## 円周をセンサ数
   ## まず電極として設定した、円周上の各点から円の中心に向けてエッジを描く
   ## これで最初のメッシュを作り、ノードと合わせてシステムオブジェクトを生成する
   var

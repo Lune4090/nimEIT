@@ -24,6 +24,24 @@ func rad_nvec_2D*(nvec: (float, float)): float =
     theta *= -1
   return theta
 
+func norm*(v: (float, float)): float =
+  return sqrt(v[0]^2 + v[1]^2)
+
+func norm*(v: (float, float, float)): float =
+  return sqrt(v[0]^2 + v[1]^2 + v[2]^2)
+
+func cross*(va: (float, float, float), vb: (float, float, float)): (float, float, float) = 
+  return (va[1]*vb[2] - va[2]*vb[1], va[2]*vb[0] - va[0]*vb[2], va[0]*vb[1] - va[1]*vb[0])
+
+func dot*(va: (float, float), vb: (float, float)): float =
+  return va[0]*vb[0] + va[1]*vb[1]
+
+func reversed*(v: (float, float)): (float, float)= 
+  return (-v[0], -v[1])
+
+func reversed*(v: (float, float, float)): (float, float, float)= 
+  return (-v[0], -v[1], -v[2])
+
 func det2x2(t: Tensor[float]): Result[float, CatchableError] =
   if t.shape != [2, 2]:
     return CatchableError(msg: "input's shape must be 2x2").err()
