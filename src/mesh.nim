@@ -12,7 +12,7 @@ type
     isElectrode* = false
   
   Element* = object
-    ## counter-clock-wiseに並んでいることを要請する予定
+    ## 現状は格納順指定はなし
     idxVertice1*: int
     idxVertice2*: int
     idxVertice3*: int

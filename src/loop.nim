@@ -97,7 +97,7 @@ proc backward_loop*(meshName: string) =
       if row[0].parseInt == experimentID1:
         V1.add(row[2].parseFloat)
 
-    # ノイズの導入
+    # ノイズの導入(ここじゃなくてメッシュ本体に直接加算すべきかもしれない、伝導率も同じく)
     var errors = intentional_error_from_toml("data/" & meshName & "/" & inputTomlName & ".toml").value()
     for error in errors.keys():
       if error == "Vs":
@@ -110,6 +110,18 @@ proc backward_loop*(meshName: string) =
             V = V + gauss(mu = mu, sigma = sigma)
           for V in V1.mitems():
             V = V + gauss(mu = mu, sigma = sigma)
+
+    for error in errors.keys():
+      if error == "σs":
+        if errors["σs"]["type"] == "Gaussian":
+          let
+            mu = errors["σs"]["mu"].parseFloat
+            sigma = errors["σs"]["sigma"].parseFloat
+          echo "Add gaussian noise to voltages..."
+          for σ in σ0.mitems():
+            σ = σ + gauss(mu = mu, sigma = sigma)
+          for σ in σ1.mitems():
+            σ = σ + gauss(mu = mu, sigma = sigma)
 
     db.close()
   

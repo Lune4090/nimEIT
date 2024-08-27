@@ -5,8 +5,7 @@ author        = "lune4090"
 description   = "A new awesome nimble package"
 license       = "MIT"
 srcDir        = "src"
-bin           = @["EIT"]
-
+bin           = @["nimEIT"]
 
 # Dependencies
 
