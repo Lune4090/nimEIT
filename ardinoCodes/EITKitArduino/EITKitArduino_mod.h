@@ -102,7 +102,6 @@ class EITKitArduino
   public:
     EITKitArduino();
     EITKitArduino(int num_electrodes, int num_bands, int num_terminals, Meas_t drive_type, Meas_t meas_type, bool bluetooth_communication);
-    void ensureBluetoothConnection();
     void take_measurements(Meas_t drive_type, Meas_t meas_type); 
     void set_num_electrodes(int num_electrodes);
     int get_num_electrodes();
@@ -128,8 +127,6 @@ class EITKitArduino
     double* get_phase_array();
  
   private:
-    // Bluetooth Variables
-    std::string measurements_to_send = "";
     // Mapping of electrode number (input) to MUX channel (output)
     // const uint8_t elec_to_mux[MAX_ELECTRODES] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16};
     const uint8_t elec_to_mux[MAX_ELECTRODES] = { 9, 10, 11, 8, 7, 6, 5, 4, 3, 2, 1, 0, 12, 13, 14, 15, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16};
@@ -169,20 +166,15 @@ class EITKitArduino
     bool serial_communication = true; // whether statements are printed in Serial monitor during execution
     bool _bluetooth_communication = false;
 
-    void BLEStart();
     void calibrateEIT();
-    void sendBluetoothMessage();
     void calibrate_samples();
     void calibrate_gain(Meas_t drive_type, Meas_t meas_type);
-    void calibrate_signal(Meas_t drive_type, Meas_t meas_type);
     void AD5270_Write(const int chip_select, uint8_t cmd, uint16_t data);
     void AD5270_LockUnlock(const int chip_select, uint8_t lock);
 
     void spi_write(uint8_t data_pin, uint8_t clock_pin, uint32_t freq, uint8_t bit_order, uint8_t mode, uint8_t bits, uint32_t val);
     uint16_t analog_read();
-    uint32_t read_signal(double * rms, double * mag, double * phase, uint16_t * error_rate, uint8_t debug);
-    void read_frame(Meas_t drive_type, Meas_t meas_type, double * rms_array, double * mag_array, double * phase_array, uint8_t num_elec);
-
+    
     void AD5270_Shutdown(const int chip_select, uint8_t shutdown);
     void AD5270_Set(const int chip_select, uint16_t val);
     void AD5930_Write(uint8_t reg, uint16_t data);
@@ -193,9 +185,6 @@ class EITKitArduino
     
     uint32_t gpio_read();
     uint16_t gpio_convert(uint32_t gpio_reg);
-    
-    
-    uint16_t sine_compare(uint16_t * signal, uint16_t pk_pk, uint16_t points_per_period, uint8_t num_periods);   
 };
 
 #endif
