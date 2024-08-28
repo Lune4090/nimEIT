@@ -85,15 +85,10 @@ int16_t sine_table[1024] = {
 
 extern volatile uint32_t F_CPU_ACTUAL;
 
-// GPIO Pin to analog channel mapping from Arduino\hardware\teensy\avr\cores\teensy4\analog.c
+// GPIO Pin to analog channel mapping from ~/.arduino15/packages/teensy/hardware/avr/1.59.0/cores/teensy4/analog.c (linux)
 extern const uint8_t pin_to_channel[42];
-uint32_t gpio_buf[MAX_SAMPLES*ADC_AVG];     // Store raw GPIO readings
-
-// auto_calibration is default on
-// visualize 3d is default off
-EITKitArduino::EITKitArduino(){
-  EITKitArduino(32,1,2, AD, AD, false);
-}
+// Store raw GPIO readings
+uint32_t gpio_buf[MAX_SAMPLES*ADC_AVG];
 
 EITKitArduino::EITKitArduino(int num_electrodes, int num_bands, int num_terminals, Meas_t drive_type, Meas_t meas_type, bool bluetooth_communication)
 {
@@ -109,24 +104,24 @@ EITKitArduino::EITKitArduino(int num_electrodes, int num_bands, int num_terminal
   _meas_type = meas_type; // protocol for electrodes used in voltage reading 
   _bluetooth_communication = bluetooth_communication;
 
-  // Initialize CS on high and toggle low when communicating
+  /* 各ピンのIn/Out定義 */
+
+  // spi通信におけるCS(コントロール)ピン、各ICで固有
   pinMode(CHIP_SEL_DRIVE, OUTPUT);
   pinMode(CHIP_SEL_MEAS, OUTPUT);
   pinMode(CHIP_SEL_AD5930, OUTPUT);
-  digitalWrite(CHIP_SEL_DRIVE, HIGH);
-  digitalWrite(CHIP_SEL_MEAS, HIGH);
-  digitalWrite(CHIP_SEL_AD5930, HIGH);
 
+  // spi通信におけるMOSI, SCKピン、デイジーチェーン接続された全ICが共有
   pinMode(MOSI_PIN, OUTPUT);
   pinMode(SCK_PIN, OUTPUT);
-
   
-  pinMode(CHIP_SEL_MUX_SRC, OUTPUT);
-  pinMode(CHIP_SEL_MUX_SINK, OUTPUT);
-  pinMode(CHIP_SEL_MUX_VP, OUTPUT);
-  pinMode(CHIP_SEL_MUX_VN, OUTPUT);
+  // マルチプレクサに対する電流/電圧印加ピン
+  pinMode(CHIP_SEL_MUX_SRC, OUTPUT);  // I_in
+  pinMode(CHIP_SEL_MUX_SINK, OUTPUT); // I_out
+  pinMode(CHIP_SEL_MUX_VP, OUTPUT);   // V+
+  pinMode(CHIP_SEL_MUX_VN, OUTPUT);   // V-
 
-
+  // AD5930(波形生成器)をコントロールするピン
   pinMode(AD5930_INT_PIN, OUTPUT);
   pinMode(AD5930_CTRL_PIN, OUTPUT);
   pinMode(AD5930_STANDBY_PIN, OUTPUT);
@@ -144,7 +139,12 @@ EITKitArduino::EITKitArduino(int num_electrodes, int num_bands, int num_terminal
   pinMode(22, INPUT);
   pinMode(23, INPUT);
 
- 
+  /* 各種外部IC初期化 */
+
+  digitalWrite(CHIP_SEL_DRIVE, HIGH);
+  digitalWrite(CHIP_SEL_MEAS, HIGH);
+  digitalWrite(CHIP_SEL_AD5930, HIGH);
+
   digitalWrite(CHIP_SEL_MUX_SRC, HIGH);
   digitalWrite(CHIP_SEL_MUX_SINK, HIGH);
   digitalWrite(CHIP_SEL_MUX_VP, HIGH);
@@ -154,20 +154,45 @@ EITKitArduino::EITKitArduino(int num_electrodes, int num_bands, int num_terminal
   digitalWrite(AD5930_CTRL_PIN, LOW);
   digitalWrite(AD5930_STANDBY_PIN, LOW);
 
+  // AD5930のプログラムはAnalogDevicesの資料(https://www.analog.com/media/jp/technical-documentation/data-sheets/AD5930_JP.pdf)p.17~を参照
+  // ざっくりいうと以下の通り
+    // AD5930の機能・オプションは16bitの信号で制御される
+    // 上位4bit(D15~12): 8+2個の各12bitレジスタを指定する用、各レジスタの担当する機能は以下
+      // 0000: C_REG:   制御ビット
+      // 0001: N_INCR:  インクリメント数
+      // 0010: Δf:      デルタ周波数下位12ビット
+      // 0011: Δf:      デルタ周波数上位12ビット
+      // 01__: t_INT:   インクリメント・インターバル
+      // 10__: T_BURST: バースト・インターバル
+      // 1100: F_START: 開始周波数の下位12ビット
+      // 1101: F_START: 開始周波数の上位12ビット
+      // 1110: :        予備
+      // 1111: :        予備
+    // 下位12bit(D11~0): 各種機能を制御する用
+      // D11: B24
+      // D10: DAC ENABLE: 
+      // D9 : SINE/TRI:       1=sin波出力
+      // D8 : MSBOUTEN:   
+      // D7 : CW/BURST:       1=連続モード, 0=BURSTモード
+      // D6 : INT/EXT BURST:  D7=0でアクティブ
+      // D5 :
+      // D4 :
+      // D3 :
+      // D2 :
+      // D1 : 予備
+      // D0 : 予備
+
   AD5930_Write(CTRL_REG, 0b011111110011);
   AD5930_Set_Start_Freq(TEST_FREQ);
 
   AD5270_LockUnlock(CHIP_SEL_DRIVE, 0);
   AD5270_LockUnlock(CHIP_SEL_MEAS, 0);
 
-  /* Start the frequency sweep */
+  // AD5930を起動、デフォルトではある周波数の正弦波が出力されており、CTRL_PINからパルスを送り込むたびに周波数がインクリメントされる
   digitalWrite(AD5930_CTRL_PIN, HIGH);
   delay(100);
 
-  // mux_write(CHIP_SEL_MUX_SRC, elec_to_mux[0], MUX_EN);
-  // mux_write(CHIP_SEL_MUX_SINK, elec_to_mux[1], MUX_EN);
-  // mux_write(CHIP_SEL_MUX_VP, elec_to_mux[0], MUX_EN);
-  // mux_write(CHIP_SEL_MUX_VN, elec_to_mux[1], MUX_EN);
+  // なぜか2端子モードで駆動
   mux_write_to_electrode(SRC, 0, MUX_EN);
   mux_write_to_electrode(SINK, 1, MUX_EN);
   mux_write_to_electrode(VP, 0, MUX_EN);
@@ -180,12 +205,7 @@ EITKitArduino::EITKitArduino(int num_electrodes, int num_bands, int num_terminal
   /* Read resting impedance state for calibration */
   for (i = 0; i < 30; i++)
   {
-    // read_frame(AD, AD, _signal_rms, _signal_phase, NUM_ELECTRODES);
-    #if defined(ARDUINO_ARCH_ESP32)
-    read_frame(_drive_type, _meas_type, _signal_rms, _num_electrodes);
-    #elif defined(__IMXRT1062__) // for Teensy 4.0
     read_frame(AD, AD, _signal_rms, signal_mag, _signal_phase, _num_electrodes);
-    #endif 
 
     uint16_t j;
     for (j = 0; j < _num_meas; j++)
