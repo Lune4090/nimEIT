@@ -12,7 +12,7 @@
 #define MUX_DIS            0
 #define NUM_ELECTRODES     32
 #define NUM_MEAS           NUM_ELECTRODES*NUM_ELECTRODES //used only for instantiation of measurement arrays
-#define MAX_ELECTRODES     64 // maximum electrodes that can be used
+#define MAX_ELECTRODES     32 // maximum electrodes that can be used
 
 // AD5930 register addresses - signal generator
 #define CTRL_REG           0x00
@@ -38,8 +38,8 @@ typedef enum { SRC, SINK, VP, VN } Mux_t;
 #define VSPI_MOSI_PIN      
 #define VSPI_SCK_PIN       
 
-#define MOSI_PIN           5
-#define SCK_PIN            4
+#define MOSI_PIN           11
+#define SCK_PIN            13
 
 #define AD5930_CLK_FREQ    50000000
 #define TEST_FREQ          40000
@@ -60,42 +60,38 @@ typedef enum { SRC, SINK, VP, VN } Mux_t;
 #define CMD_SHTDN          0x09
 
 #define CHIP_SEL_AD5930    3  // Chip select pin for AD5930
-#define CHIP_SEL_DRIVE     9  // Chip select pin for driving digital rheostat
-#define CHIP_SEL_MEAS      13 // Chip select pin for measuring digital rheostat
+#define CHIP_SEL_DRIVE     0  // Chip select pin for driving digital rheostat
+#define CHIP_SEL_MEAS      1 // Chip select pin for measuring digital rheostat
 #define CHIP_SEL_MUX_SRC   24 // Chip select pin for source electrodes MUX
-#define CHIP_SEL_MUX_SINK  25 // Chip select pin for sink electrodes MUX
-#define CHIP_SEL_MUX_VP    26 // Chip select for voltage measurement positive electrodes MUX
-#define CHIP_SEL_MUX_VN    27 // Chip select for voltage measurement negative electrodes MUX
+#define CHIP_SEL_MUX_SINK  28 // Chip select pin for sink electrodes MUX
+#define CHIP_SEL_MUX_VP    30 // Chip select for voltage measurement positive electrodes MUX
+#define CHIP_SEL_MUX_VN    32 // Chip select for voltage measurement negative electrodes MUX
 
-#define AD5930_MSBOUT_PIN  8
-#define AD5930_INT_PIN     7  // Pulse high to reset internal state machine
-#define AD5930_CTRL_PIN    6  // Pull high to start frequency sweep. Pull low to end the burst. Pull high again to increment frequency
+#define AD5930_MSBOUT_PIN  6
+#define AD5930_INT_PIN     5  // Pulse high to reset internal state machine
+#define AD5930_CTRL_PIN    4  // Pull high to start frequency sweep. Pull low to end the burst. Pull high again to increment frequency
 #define AD5930_STANDBY_PIN 2  // Pull high to power down 
 
 /* GPIO pin mappings */
 #define CHIP_SEL_MCP23S17     // chip select for MCP23517: IO Expander
 
 // Map ADC pins to GPIO pins
-#define ADC_BIT0    // LSb
-#define ADC_BIT1   
-#define ADC_BIT2   
-#define ADC_BIT3   
-#define ADC_BIT4   
-#define ADC_BIT5   
-#define ADC_BIT6   
-#define ADC_BIT7   
-#define ADC_BIT8   
-#define ADC_BIT9   
+#define ADC_BIT0  14 // LSb
+#define ADC_BIT1  15
+#define ADC_BIT2  16
+#define ADC_BIT3  17
+#define ADC_BIT4  18
+#define ADC_BIT5  19
+#define ADC_BIT6  20
+#define ADC_BIT7  21
+#define ADC_BIT8  22
+#define ADC_BIT9  23
 
 /* Chip Select for MUX for electrodes 32-63 */
 #define CHIP_SEL_MUX_SRC_2       // Chip select pin for source electrodes MUX //top2
 #define CHIP_SEL_MUX_SINK_2      // Chip select pin for sink electrodes MUX
 #define CHIP_SEL_MUX_VP_2        // Chip select for voltage measurement positive electrodes MUX //bottom2
 #define CHIP_SEL_MUX_VN_2        // Chip select for voltage measurement negative electrodes MUX
-
-// Define Bluetooth UUID
-#define SERVICE_UUID        
-#define CHARACTERISTIC_UUID 
 
 class EITKitArduino
 {
@@ -125,11 +121,15 @@ class EITKitArduino
     uint16_t get_voltage_gain();
     double* get_magnitude_array();
     double* get_phase_array();
+
+    // Original
+    uint32_t read_ADCBits();
+
  
   private:
     // Mapping of electrode number (input) to MUX channel (output)
     // const uint8_t elec_to_mux[MAX_ELECTRODES] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16};
-    const uint8_t elec_to_mux[MAX_ELECTRODES] = { 9, 10, 11, 8, 7, 6, 5, 4, 3, 2, 1, 0, 12, 13, 14, 15, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16};
+    const uint8_t elec_to_mux[MAX_ELECTRODES] = { 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 48, 47, 46, 45, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40};
 
     // Global calibration parameters
     float sample_rate;
@@ -185,6 +185,9 @@ class EITKitArduino
     
     uint32_t gpio_read();
     uint16_t gpio_convert(uint32_t gpio_reg);
+
+    uint32_t read_signal(double * rms, double * mag, double * phase, uint16_t * error_rate, uint8_t debug);
+    uint16_t sine_compare(uint16_t * signal, uint16_t pk_pk, uint16_t points_per_period, uint8_t num_periods);
 };
 
 #endif

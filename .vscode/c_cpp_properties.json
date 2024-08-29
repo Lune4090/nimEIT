@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/lune/.arduino15/**"
+                "/home/lune/.arduino15/**",
+                "/home/lune/.arduino15/packages/teensy/hardware/avr/1.59.0/cores/usb_serial"
             ],
             "defines": [],
             "cStandard": "c17",
