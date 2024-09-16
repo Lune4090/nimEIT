@@ -4,28 +4,6 @@
 */
 
 // MCP4018(デジタルポテンショメーター(可変抵抗器))
-  // AnalogDevicesの資料(https://www.analog.com/media/jp/technical-documentation/data-sheets/AD5270_AD5271_jp.pdf) p.19~ を参照
-  // AD5270の制御にはSPI通信が利用され、シフトレジスタに対して送られる16bitの信号からなる10個のコードで行われる
-    // 2bit: 未使用, 4bit(C3~C0): コマンドビット, 10bit(D9~D0): データビット
-  // 抵抗値の制御はRDACレジスタ、保存は50-TPメモリレジスタ、
-  // シフトレジスタの書き込みは以下の順に行われる
-    // 1. 書き込みシーケンス開始(SYNC -> Lo)
-    // 2. シフトレジスタへ送る信号をDINピンに入力
-    // 3. 書き込みシーケンス終了(SYNC -> High)
-    // 4. シリアル・データ・ワードのデコード
-  // 具体的なコードは以下の通り
-    // Command 0: __+0000+xxxxxxxxxx: NOOP
-    // Command 1: __+0001+oooooooooo: シリアルレジスタデータのRDACレジスタ(抵抗を制御)への書き込み
-    // Command 2: __+0010+xxxxxxxxxx: RDACワイパーレジスタの読み出し
-    // Command 3: __+0011+xxxxxxxxxx: RDACレジスタの設定を50-TP(最大50回書き込み可能な不揮発性メモリ, 抵抗値を格納)に格納
-    // Command 4: __+0100+xxxxxxxxxx: RDACを50-TP内の最新のデータに更新
-    // Command 5: __+0101+xxxxoooooo: 次のフレームに50-TPの内容を読み出し
-    // Command 6: __+0110+xxxxxxxxxx: 50-TP内の最新のプログラムされたメモリ位置を読み出し
-    // Command 7: __+0111+xxxxxxxooo: シリアルレジスタデータを制御レジスタに書き込み
-    // Command 8: __+1000+xxxxxxxxxx: 制御レジスタの内容を読み出し
-    // Command 9: __+1001+xxxxxxxxxo: D0=0でノーマルモード, D0=1でデバイスをシャットダウン
-  // 一方、上記のコマンドの内、読み出しを行うもの(2, 5, 6, 8)は、シリアルデータ出力(SDO)ピンの出力からその内容を読み取る
-  // が、EIT-kitではAD5270のSDOピンは使用されていない為割愛する
 
 #include <Arduino.h>
 #include "EITSpresense.h"
@@ -38,7 +16,7 @@
 
 
 EITSpresense::EITSpresense(){
-  EITKitArduino(32,1,2, AD, AD, false);
+  EITSpresense(32,1,2, AD, AD, false);
 }
 
 EITSpresense::EITSpresense(int num_electrodes, int num_bands, int num_terminals, Meas_t drive_type, Meas_t meas_type, bool bluetooth_communication) {
@@ -63,7 +41,7 @@ EITSpresense::EITSpresense(int num_electrodes, int num_bands, int num_terminals,
 
   // I2C initialization
   pinMode(PIN_I2C_SDA, OUTPUT);
-  pinMode(PIN_I2C_SCK, OUTPUT);
+  pinMode(PIN_I2C_SCL, OUTPUT);
   
   // マルチプレクサに対する電流/電圧印加ピン
   // I_in
@@ -74,7 +52,6 @@ EITSpresense::EITSpresense(int num_electrodes, int num_bands, int num_terminals,
   /* 各種外部IC初期化 */
 
   // 波形発生器初期化
-  AD9833_write(CTRL_REG, 0b011111110011);
 }
 
 /* 信号読み取り */
@@ -86,13 +63,18 @@ void EITSpresense::take_measurements(Meas_t drive_type, Meas_t meas_type){
 /* For SPI comminucation */
 // Shift a byte out serially with the given frequency in Hz (<= 500kHz)
 void EITSpresense::spi_write(uint8_t data_pin, uint8_t clock_pin, uint32_t freq, uint8_t bit_order, uint8_t mode, uint8_t bits, uint32_t val){
-    uint32_t period = (freq >= 500000) ? 1 : (500000 / freq);   // Half clock period in uS
+    uint32_t period = (freq >= 250000) ? 1 : (250000 / freq);   // Half clock period in uS
     uint8_t cpol = (mode == SPI_MODE2 || mode == SPI_MODE3);
     uint8_t cpha = (mode == SPI_MODE1 || mode == SPI_MODE3);
     uint8_t sck = cpol ? HIGH : LOW;
 
     uint8_t i;
     uint32_t start_time;
+
+    Serial.print("period: ");
+    Serial.println(period);
+    Serial.print("SPI mode: ");
+    Serial.println(mode);
 
     // Set clock idle for 2 periods
     digitalWrite(clock_pin, sck);
@@ -132,11 +114,34 @@ void EITSpresense::spi_write(uint8_t data_pin, uint8_t clock_pin, uint32_t freq,
 
 /* For signal generator (AD9833) */
 
-// Wrapper for AD9833 using SPI
+// Wrapper for AD9833 using original SPI program
 void EITSpresense::AD9833_write(uint16_t val) {
-  digitalWrite(CHIP_SEL_AD5930, LOW);
-  spi_write(MOSI_PIN, SCK_PIN, SPI_FREQ_FAST, MSBFIRST, SPI_MODE1, 16, data_word);
-  digitalWrite(CHIP_SEL_AD5930, HIGH);
+  digitalWrite(PIN_SPI_SS_AD9833, LOW);
+  delayMicroseconds(500);
+  spi_write(PIN_SPI_MOSI, PIN_SPI_SCK, RATE_SPI_FREQ, MSBFIRST, SPI_MODE1, 16, val);
+  delayMicroseconds(500);
+  digitalWrite(PIN_SPI_SS_AD9833, HIGH);
+  delayMicroseconds(500);
+}
+
+// Wrapper for AD9833 using standard SPI program
+uint16_t EITSpresense::AD9833_send_and_recv(uint16_t val) {
+  // Start the SPI library
+  SPI.begin();
+  // Configure the SPI port
+  SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE1));
+  
+  // Begin data transfer
+  digitalWrite(PIN_SPI_SS_AD9833, LOW);
+  uint16_t content = 0;
+  content = SPI.transfer16(val);
+  digitalWrite(PIN_SPI_SS_AD9833, HIGH);
+
+  // End the SPI transation
+  SPI.endTransaction();
+  // Disable SPI port and free pins for use as GPIO
+  SPI.end();
+  return content;
 }
 
 /* For MUX (TC4051BP) */

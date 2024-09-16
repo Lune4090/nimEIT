@@ -18,7 +18,7 @@ typedef enum { SRC, SINK, VP, VN } Mux_t;
 // AD9833(signal generator) register addresses
 
 // Constants
-#define RATE_SPI_FREQ       500000
+#define RATE_SPI_FREQ       250000
 #define RATE_I2C_FREQ       100000
 
 /* For Spresense */
@@ -38,6 +38,8 @@ class EITSpresense
     EITSpresense(int num_electrodes, int num_bands, int num_terminals, Meas_t drive_type, Meas_t meas_type, bool bluetooth_communication);
 
     void EITSpresense::take_measurements(Meas_t drive_type, Meas_t meas_type);
+    void EITSpresense::AD9833_write(uint16_t val);
+    uint16_t EITSpresense::AD9833_send_and_recv(uint16_t val);
 
   private:
     // Global calibration parameters
@@ -52,7 +54,6 @@ class EITSpresense
 
     void spi_write(uint8_t data_pin, uint8_t clock_pin, uint32_t freq, uint8_t bit_order, uint8_t mode, uint8_t bits, uint32_t val);
 
-    void EITSpresense::AD9833_write(uint16_t val);
     void mux_write_to_electrode(Mux_t chip_select, uint8_t electrode_sel, uint8_t enable);
     void mux_write(const int chip_select, uint8_t pin_sel, uint8_t enable);
 };
