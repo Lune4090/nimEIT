@@ -32,6 +32,8 @@ proc generate_mesh*(system: MeshParams, drawVert = false, drawMesh = false): Mes
 
     delauney_method_mesh_update(mesh2d, newVert)
 
+  calculate_elements_area(mesh2d)
+
   echo "Number of vertices: " & $len(mesh2d.vertices)
   echo "Number of elements: " & $len(mesh2d.elements)
   if drawVert:
@@ -53,8 +55,8 @@ proc get_stiffness_matrices*(mesh2d: Mesh): (Tensor[float], Tensor[float], Tenso
 
   # Initial-4. Multiply σRef(conductivity) to non-unit local stiffness matrix for each element
 
-  for (i, element) in mesh2d.elements.pairs:
-    unitStackedLocalStiffnessMat[i, _] = stackedLocalStiffnessMat[i, _]*element.σRef # ここで伝導率の初期推定値への依存が発生
+  for (i, elem) in mesh2d.elements.pairs:
+    unitStackedLocalStiffnessMat[i, _] = stackedLocalStiffnessMat[i, _]*elem.σRef # ここで伝導率の初期推定値への依存が発生
 
   # Initial-5. Map local stiffness matrix with conductivity to global large dense stiffness matrix
 

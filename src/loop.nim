@@ -10,30 +10,31 @@ proc forward_loop*(preserve_data: bool, meshName: string, settingFileName: strin
     meshParams = mesh_params_from_toml(meshTomlPath).value()
     settingTomlPath = "data/" & meshName & "/" & settingFileName & ".toml"
     (centers, Rs, σRefs) = σRefs_from_toml(settingTomlPath).value()
-    (verts, Is) = Is_from_toml(settingTomlPath).value()
+    (verts, Js) = Js_from_toml(settingTomlPath).value()
 
   # Generate mesh
   var mesh2d = generate_mesh(meshParams, drawVert = true, drawMesh = true)
   
   # Elements
   mesh2d.modify_σRef_circle_region(centers, Rs, σRefs)
-  mesh2d.modify_I(verts, Is)
+  mesh2d.modify_J(verts, Js)
 
   # Get stiffness matrices
   var (stackedLocalStiffnessMat, unitStackedLocalStiffnessMat, stiffness_mat) = get_stiffness_matrices(mesh2d)
   discard stackedLocalStiffnessMat
   discard unitStackedLocalStiffnessMat
 
-  # Forward. Solve KV=I based on Galerkin method and update V, then get the voltage mapping
+  # Forward. Solve KV=J based on Galerkin method and update V, then get the voltage mapping
   var σRef: seq[float]
   for (i, elem) in mesh2d.elements.pairs():
     σRef.add(elem.σRef)
   
-  var I: seq[float]
+  # 次元はAmpere/Length(ここでスケール反映!)
+  var J: seq[float]
   for (i, vert) in mesh2d.vertices.pairs():
-    I.add(vert.I)
+    J.add(vert.J)
   
-  let V = solve(stiffness_mat, I.toTensor)
+  let V = solve(stiffness_mat, J.toTensor)
   for (i, vert) in mesh2d.vertices.mpairs():
     vert.V = V[i]
   
@@ -75,7 +76,7 @@ proc backward_loop*(meshName: string) =
       experimentID0 = experimentIDs0[i]
       experimentID1 = experimentIDs1[i]
     var
-      I: seq[float]
+      J: seq[float]
       V0: seq[float]
       V1: seq[float]
       σ0: seq[float]
@@ -90,9 +91,9 @@ proc backward_loop*(meshName: string) =
       if row[0].parseInt == experimentID1:
         σ1.add(row[1].parseFloat)
 
-    for row in db.fastRows(sql"SELECT ExperimentID, I, V FROM VerticeTable"):
+    for row in db.fastRows(sql"SELECT ExperimentID, J, V FROM VerticeTable"):
       if row[0].parseInt == experimentID0:
-        I.add(row[1].parseFloat)
+        J.add(row[1].parseFloat)
         V0.add(row[2].parseFloat)
       if row[0].parseInt == experimentID1:
         V1.add(row[2].parseFloat)
@@ -129,7 +130,7 @@ proc backward_loop*(meshName: string) =
       elem.σRef = σ0[j]
       elem.Δσ = σ1[j] - σ0[j]
     for (j, vert) in mesh2d.vertices.mpairs():
-      vert.I = I[j]
+      vert.J = J[j]
       vert.V = V0[j]
       vert.ΔV = V1[j] - V0[j]
 

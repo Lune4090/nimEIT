@@ -28,8 +28,8 @@ proc update_database*(mesh: Mesh, meshName: string) =
       $experimentID.parseInt, $i, $elem.σRef)
 
   for (i, vert) in mesh.vertices.pairs():    
-    db.exec(sql"INSERT INTO VerticeTable (ExperimentID, VerticeID, I, V) VALUES (?, ?, ?, ?)",
-      $experimentID.parseInt, $i, $vert.I, $vert.V)
+    db.exec(sql"INSERT INTO VerticeTable (ExperimentID, VerticeID, J, V) VALUES (?, ?, ?, ?)",
+      $experimentID.parseInt, $i, $vert.J, $vert.V)
 
   echo "Database is updated"
 

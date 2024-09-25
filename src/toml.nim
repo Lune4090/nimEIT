@@ -47,23 +47,23 @@ proc σRefs_from_toml*(path: string): Result[(seq[(float, float)], seq[float], s
   
   return (centers, Rs, σRefs).ok()
 
-proc Is_from_toml*(path: string): Result[(seq[int], seq[float]), CatchableError] =
+proc Js_from_toml*(path: string): Result[(seq[int], seq[float]), CatchableError] =
   let table = parseFile(path)
-  if not table["Is"].hasKey("verts"):
+  if not table["Js"].hasKey("verts"):
     return CatchableError(msg: ".toml format is invalid, verts is not found.").err()
-  if not table["Is"].hasKey("Is"):
-    return CatchableError(msg: ".toml format is invalid, Is is not found.").err()
+  if not table["Js"].hasKey("Js"):
+    return CatchableError(msg: ".toml format is invalid, Js is not found.").err()
 
   var
     verts: seq[int]
-    Is: seq[float]
+    Js: seq[float]
 
-  for i in 0..<len(table["Is"]["verts"]):
-    verts.add(table["Is"]["verts"][i].getInt)
-  for i in 0..<len(table["Is"]["Is"]):
-    Is.add(table["Is"]["Is"][i].getFloat)
+  for i in 0..<len(table["Js"]["verts"]):
+    verts.add(table["Js"]["verts"][i].getInt)
+  for i in 0..<len(table["Js"]["Js"]):
+    Js.add(table["Js"]["Js"][i].getFloat)
   
-  return (verts, Is).ok()
+  return (verts, Js).ok()
 
 proc experimentIDs_from_toml*(path: string): Result[(seq[int], seq[int]), CatchableError] =
   let table = parseFile(path)
