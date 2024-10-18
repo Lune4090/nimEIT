@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "metaData": {
+    "url": "https://github.com/euantorano/serial.nim",
+    "downloadMethod": "git",
+    "vcsRevision": "dd0ab807b34bd8221e6c1ac83ed8ffa31bc39d8e",
+    "files": [
+      "/serial/utils.nim",
+      "/serial/serialport.nim",
+      "/serial/private/serialport/serialport_posix.nim",
+      "/serial/private/utils/windows_registry.nim",
+      "/serial/private/utils/list_serialports_posix.nim",
+      "/serial.nimble",
+      "/serial/private/utils/list_serialports_linux.nim",
+      "/serial/private/utils/list_serialports_windows.nim",
+      "/serial/private/serialport/serialport_common.nim",
+      "/serial/private/utils/list_serialports_mac.nim",
+      "/serial/private/ffi/ffi_windows.nim",
+      "/serial.nim",
+      "/serial/serialstream.nim",
+      "/serial/private/serialport/serialport_windows.nim"
+    ],
+    "binaries": [],
+    "specialVersions": [
+      "1.2.0"
+    ]
+  }
+}
